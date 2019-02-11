@@ -639,26 +639,6 @@ class Task extends ContentActiveRecord implements Searchable
         return false;
     }
 
-
-    public function AddTaskAccount()
-    {
-        $account = new Account([
-            'title' => 'Task Account (' . $this->title . ')',
-            'space_id' => $this->content->container->id,
-            'account_type' => Account::TYPE_STANDARD
-        ]);
-
-        $account->save();
-
-        $taskAccount = new TaskAccount([
-            'task_id' => $this->id,
-            'account_id' => $account->id,
-            'account_type' => self::ACCOUNT_SPACE,
-        ]);
-
-        return $taskAccount->save();
-    }
-
     public function isOverdue()
     {
         return $this->schedule->isOverdue();
@@ -954,9 +934,6 @@ class Task extends ContentActiveRecord implements Searchable
         return (self::isTaskResponsible() && (!self::isCompleted()));
     }
 
-
-
-
     // ###########  handle view-specific  ###########
 
     /**
@@ -966,7 +943,7 @@ class Task extends ContentActiveRecord implements Searchable
      */
     public function getPercent()
     {
-//        $denominator = TaskItem::find()->where(['task_id' => $this->id])->count();
+        //$denominator = TaskItem::find()->where(['task_id' => $this->id])->count();
         $denominator = $this->getItems()->count();
         // add STATUS_IN_PROGRESS and STATUS_COMPLETED
         $denominator += 2;
@@ -1031,6 +1008,7 @@ class Task extends ContentActiveRecord implements Searchable
     /**
      * @throws \Exception
      * @throws \yii\db\StaleObjectException
+     * @throws \Throwable
      */
     public function beforeRemoveUser()
     {
@@ -1042,9 +1020,10 @@ class Task extends ContentActiveRecord implements Searchable
 
     /**
      * @param $userId
-     * @return boolw
+     * @return bool
      * @throws \Exception
      * @throws \yii\db\StaleObjectException
+     * @throws \Throwable
      */
     public function removeUser($userId)
     {
@@ -1067,5 +1046,26 @@ class Task extends ContentActiveRecord implements Searchable
         if ($this->task_list_id && $this->list) {
             return $this->list->getColor();
         }
+    }
+
+    // ###########  handle task related account  ###########
+
+    public function AddTaskAccount()
+    {
+        $account = new Account([
+            'title' => 'Task Account (' . $this->title . ')',
+            'space_id' => $this->content->container->id,
+            'account_type' => Account::TYPE_STANDARD
+        ]);
+
+        $account->save();
+
+        $taskAccount = new TaskAccount([
+            'task_id' => $this->id,
+            'account_id' => $account->id,
+            'account_type' => self::ACCOUNT_SPACE,
+        ]);
+
+        return $taskAccount->save();
     }
 }
