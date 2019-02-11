@@ -1055,7 +1055,7 @@ class Task extends ContentActiveRecord implements Searchable
         $account = new Account([
             'title' => "Task#$this->id ( $this->title )",
             'space_id' => $this->content->container->id,
-            'account_type' => Account::TYPE_STANDARD
+            'account_type' => Account::TYPE_TASK
         ]);
 
         $account->save();
