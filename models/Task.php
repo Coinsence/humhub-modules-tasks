@@ -392,6 +392,13 @@ class Task extends ContentActiveRecord implements Searchable
             $taskReminder->delete();
         }
 
+        foreach (TaskAccount::findAll(['task_id' => $this->id]) as $taskAccount) {
+            $account = Account::findOne(['id' => $taskAccount->account_id]);
+            $account->delete();
+
+            $taskAccount->delete();
+        }
+
         return parent::beforeDelete();
     }
 
