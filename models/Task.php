@@ -416,7 +416,7 @@ class Task extends ContentActiveRecord implements Searchable
             $oldTaskUsers = $this->taskUsers;
 
             TaskUser::deleteAll(['task_id' => $this->id]);
-            $this->AddTaskAccount();
+            $this->manageTaskAccount();
             if (!empty($this->assignedUsers)) {
                 foreach ($this->assignedUsers as $guid) {
                     $user = User::findOne(['guid' => $guid]);
@@ -1055,23 +1055,36 @@ class Task extends ContentActiveRecord implements Searchable
 
     // ###########  handle task related account  ###########
 
-    public function AddTaskAccount()
+    public function manageTaskAccount()
     {
-        $account = new Account([
-            'title' => "Task#$this->id ( $this->title )",
-            'space_id' => $this->content->container->id,
-            'account_type' => Account::TYPE_TASK,
-            'user_id' => empty($this->responsibleUsers) ? null : User::findOne(['guid' => $this->responsibleUsers[0]])->id
-        ]);
+        $accountTitle = "Task#$this->id ( $this->title )";
+        $accountUserId = empty($this->responsibleUsers) ? null : User::findOne(['guid' => $this->responsibleUsers[0]])->id;
 
-        $account->save();
+        if (null === ($taskAccount = TaskAccount::findOne(['task_id' => $this->id]))) {
 
-        $taskAccount = new TaskAccount([
-            'task_id' => $this->id,
-            'account_id' => $account->id,
-            'account_type' => self::ACCOUNT_SPACE,
-        ]);
+            $account = new Account([
+                'title' => $accountTitle,
+                'space_id' => $this->content->container->id,
+                'account_type' => Account::TYPE_TASK,
+                'user_id' => $accountUserId
+            ]);
 
-        return $taskAccount->save();
+            $account->save();
+
+            $taskAccount = new TaskAccount([
+                'task_id' => $this->id,
+                'account_id' => $account->id,
+                'account_type' => self::ACCOUNT_SPACE,
+            ]);
+
+            return $taskAccount->save();
+        } else {
+            $account = Account::findOne(['id' => $taskAccount->account_id]);
+
+            $account->title = $accountTitle;
+            $account->user_id = $accountUserId;
+
+            return $account->save();
+        }
     }
 }
