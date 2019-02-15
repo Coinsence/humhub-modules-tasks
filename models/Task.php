@@ -353,7 +353,6 @@ class Task extends ContentActiveRecord implements Searchable
     {
         return self::find()
             ->contentContainer($container)
-            //->orderBy([new Expression('-task.end_datetime DESC')])
             ->readable()
             ->andWhere(['!=', 'task.status', Task::STATUS_COMPLETED]);
     }
@@ -950,7 +949,6 @@ class Task extends ContentActiveRecord implements Searchable
      */
     public function getPercent()
     {
-        //$denominator = TaskItem::find()->where(['task_id' => $this->id])->count();
         $denominator = $this->getItems()->count();
         // add STATUS_IN_PROGRESS and STATUS_COMPLETED
         $denominator += 2;

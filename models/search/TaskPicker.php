@@ -47,14 +47,11 @@ class TaskPicker
     public static function filter($cfg = null)
     {
         $defaultCfg = [
-//            'active' => true,
             'maxResult' => 10,
-//            'disableFillUser' => true,
             'keyword' => null,
             'permission' => null,
             'fillQuery' => null,
             'disabledText' => null,
-//            'fillUser' => false,
             'filter' => null
         ];
         
@@ -66,24 +63,9 @@ class TaskPicker
         }
         
         //Filter the initial query and disable task without the given permission
-//        $task = TaskFilter::filter($cfg['query'], $cfg['keyword'], $cfg['maxResult'], null, $cfg['active']);
         $task = TaskFilter::filter($cfg['query'], $cfg['keyword'], $cfg['maxResult'], null);
         $jsonResult = self::asJSON($task, $cfg['permission'], 2, $cfg['disabledText']);
-        
-//        //Fill the result with additional users if it's allowed and the result count less than maxResult
-//        if(count($task) < $cfg['maxResult'] && (isset($cfg['fillQuery']) || $cfg['fillUser']) ) {
-//
-//            //Filter out users by means of the fillQuery or default the fillQuery
-//            $fillQuery = (isset($cfg['fillQuery'])) ? $cfg['fillQuery'] : UserFilter::find();
-//            UserFilter::addKeywordFilter($fillQuery, $cfg['keyword'], ($cfg['maxResult'] - count($user)));
-//            $fillQuery->andFilterWhere(['not in', 'id', self::getUserIdArray($user)]);
-//            $fillUser = $fillQuery->all();
-//
-//            //Either the additional users are disabled (by default) or we disable them by permission
-//            $disableCondition = (isset($cfg['permission'])) ? $cfg['permission']  : $cfg['disableFillUser'];
-//            $jsonResult = array_merge($jsonResult, self::asJSON($fillUser, $disableCondition, 1, $cfg['disabledText']));
-//        }
-        
+
         if($cfg['filter'] != null) {
             array_walk($jsonResult, $cfg['filter']);
         }
@@ -153,7 +135,6 @@ class TaskPicker
             'disabled' => $disabled,
             'disabledText' => ($disabled) ? $disabledText : null,
             'text' => Html::encode($task->title),
-//            'image' => $task->getProfileImage()->getUrl(),
             'priority' => ($priority == null) ? 0 : $priority,
             'link' => $task->getUrl()
         ];

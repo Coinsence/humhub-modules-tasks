@@ -17,7 +17,6 @@ use humhub\widgets\Link;
 
 $responsible = $taskForm->task->taskResponsibleUsers;
 
-//array_push($responsible, Yii::$app->user->getIdentity()); // add creator to responsible users
 ?>
 
 <div class="modal-body">
