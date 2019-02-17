@@ -101,6 +101,11 @@ class TaskForm extends Model
     public $submitUrl;
 
     /**
+     * @var integer
+     */
+    public $has_account;
+
+    /**
      * @inheritdoc
      */
     public function init()
@@ -140,7 +145,7 @@ class TaskForm extends Model
                 return $('#task-all_day').val() == 0;
             }"],
 
-            [['is_public'], 'integer'],
+            [['is_public', 'has_account'], 'integer'],
             [['newItems', 'editItems'], 'safe'],
         ];
     }
@@ -191,12 +196,12 @@ class TaskForm extends Model
     {
         return array_merge(parent::attributeLabels(), [
             'start_date' => Yii::t('TasksModule.models_forms_TaskForm', 'Start Date'),
-//            'type_id' => Yii::t('TasksModule.models_forms_TaskForm', 'Event Type'),
             'end_date' => Yii::t('TasksModule.models_forms_TaskForm', 'End Date'),
             'start_time' => Yii::t('TasksModule.models_forms_TaskForm', 'Start Time'),
             'end_time' => Yii::t('TasksModule.models_forms_TaskForm', 'End Time'),
             'timeZone' => Yii::t('TasksModule.models_forms_TaskForm', 'Time Zone'),
             'is_public' => Yii::t('TasksModule.models_forms_TaskForm', 'Public'),
+            'has_account' => Yii::t('TasksModule.models_forms_TaskForm', 'Associate Account'),
         ]);
     }
 
@@ -237,6 +242,7 @@ class TaskForm extends Model
             $this->timeZone = $data[$this->formName()]['timeZone'];
         }
         if(parent::load($data) && !empty($this->timeZone)) {
+            $this->task->has_account = $this->has_account;
             $this->task->time_zone = $this->timeZone;
         }
 

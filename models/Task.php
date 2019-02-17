@@ -56,6 +56,7 @@ use humhub\modules\tasks\permissions\ManageTasks;
  * @property integer $cal_mode
  * @property integer $task_list_id
  * @property string $time_zone The timeZone this entry was saved, note the dates itself are always saved in app timeZone
+ * @property integer has_account
  *
  * @property TaskReminder[] $taskReminder
  * @property TaskItem[] $items
@@ -244,7 +245,7 @@ class Task extends ContentActiveRecord implements Searchable
             }"],
             [['start_datetime'], DbDateValidator::className()],
             [['end_datetime'], DbDateValidator::className()],
-            [['all_day', 'scheduling', 'review', 'request_sent'], 'integer'],
+            [['all_day', 'scheduling', 'review', 'request_sent', 'has_account'], 'integer'],
             [['cal_mode'], 'in', 'range' => TaskScheduling::$calModes],
             [['assignedUsers', 'description', 'responsibleUsers', 'selectedReminders'], 'safe'],
             [['title'], 'string', 'max' => 255],
@@ -416,7 +417,11 @@ class Task extends ContentActiveRecord implements Searchable
             $oldTaskUsers = $this->taskUsers;
 
             TaskUser::deleteAll(['task_id' => $this->id]);
-            $this->manageTaskAccount();
+
+            if (true == $this->has_account) {
+                $this->manageTaskAccount();
+            }
+
             if (!empty($this->assignedUsers)) {
                 foreach ($this->assignedUsers as $guid) {
                     $user = User::findOne(['guid' => $guid]);
