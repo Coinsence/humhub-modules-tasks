@@ -12,7 +12,6 @@ use humhub\modules\tasks\helpers\TaskUrl;
 use humhub\modules\tasks\widgets\lists\TaskListDetails;
 use humhub\modules\tasks\widgets\TaskBadge;
 use humhub\modules\tasks\widgets\TaskUserList;
-use humhub\modules\user\widgets\Image;
 use humhub\widgets\Button;
 use humhub\modules\tasks\models\Task;
 use yii\helpers\Html;
@@ -59,6 +58,16 @@ $checkUrl = $task->state->getCheckUrl();
                 ->icon('fa-pencil')->cssClass('tt')->options(['title' => Yii::t('TasksModule.base', 'Edit task')]); ?>
             <?= Button::asLink()->action('task.deleteTask', TaskUrl::deleteTask($task))
                 ->icon('fa-trash')->confirm()->cssClass('tt')->options(['title' => Yii::t('TasksModule.base', 'Delete task')]); ?>
+        </div>
+    <?php endif; ?>
+
+    <?php if ($task->hasAccount()) : ?>
+        <div class="task-controls pull-right hidden-xs">
+            <?= Html::a('<i class="fa fa-credit-card" aria-hidden="true"></i>', [
+                '/xcoin/account',
+                'id' => $task->getAccount()['id'],
+                'container' => $task->content->container
+            ]); ?>
         </div>
     <?php endif; ?>
 

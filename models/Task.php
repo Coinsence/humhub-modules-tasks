@@ -9,13 +9,10 @@
 namespace humhub\modules\tasks\models;
 
 use humhub\modules\content\components\ContentContainerPermissionManager;
-use humhub\modules\space\modules\manage\models\MembershipSearch;
 use humhub\modules\tasks\helpers\TaskUrl;
 use humhub\modules\tasks\models\account\TaskAccount;
 use humhub\modules\tasks\permissions\CreateTask;
 use humhub\modules\tasks\permissions\ProcessUnassignedTasks;
-use humhub\modules\user\components\ActiveQueryUser;
-use humhub\modules\xcoin\helpers\AccountHelper;
 use humhub\modules\xcoin\models\Account;
 use Yii;
 use yii\db\ActiveQuery;
@@ -1086,5 +1083,20 @@ class Task extends ContentActiveRecord implements Searchable
 
             return $account->save();
         }
+    }
+
+    public function getTaskAccount()
+    {
+        return $this->hasOne(TaskAccount::class, ['task_id' => 'id']);
+    }
+
+    public function getAccount()
+    {
+        return $this->hasOne(Account::class, ['id' => 'account_id'])->via('taskAccount')->one();
+    }
+
+    public function hasAccount()
+    {
+        return $this->getAccount() == null ? false : true;
     }
 }
