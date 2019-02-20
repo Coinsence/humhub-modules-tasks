@@ -1063,7 +1063,7 @@ class Task extends ContentActiveRecord implements Searchable
     public function manageTaskAccount()
     {
         $accountTitle = "Task#$this->id ( $this->title )";
-        $accountUserId = empty($this->responsibleUsers) ? null : User::findOne(['guid' => $this->responsibleUsers[0]])->id;
+        $accountUserId = empty($this->responsibleUsers) ? Yii::$app->getUser()->id : User::findOne(['guid' => $this->responsibleUsers[0]])->id;
 
         if (null === ($taskAccount = TaskAccount::findOne(['task_id' => $this->id]))) {
 
