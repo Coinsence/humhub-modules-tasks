@@ -12,7 +12,6 @@ use yii\db\Migration;
  * This migration file is introduced in order to create accounts
  * for already existing tasks.
  *
- * Please ignore it
  */
 class m190222_231557_tasks_accounts_bulk_insert extends Migration
 {
