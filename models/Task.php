@@ -11,9 +11,12 @@ namespace humhub\modules\tasks\models;
 use humhub\modules\content\components\ContentContainerPermissionManager;
 use humhub\modules\space\modules\manage\models\MembershipSearch;
 use humhub\modules\tasks\helpers\TaskUrl;
+use humhub\modules\tasks\models\account\TaskAccount;
 use humhub\modules\tasks\permissions\CreateTask;
 use humhub\modules\tasks\permissions\ProcessUnassignedTasks;
 use humhub\modules\user\components\ActiveQueryUser;
+use humhub\modules\xcoin\helpers\AccountHelper;
+use humhub\modules\xcoin\models\Account;
 use Yii;
 use yii\db\ActiveQuery;
 use yii\db\Expression;
@@ -118,6 +121,12 @@ class Task extends ContentActiveRecord implements Searchable
 
 
     /**
+     * Account Type
+     */
+    const ACCOUNT_SPACE = 0;
+    const ACCOUNT_WORKER = 1;
+
+    /**
      * @var TaskState
      */
     public $state;
@@ -137,12 +146,12 @@ class Task extends ContentActiveRecord implements Searchable
         $this->schedule = new TaskScheduling(['task' => $this]);
         $this->checklist = new TaskCheckList(['task' => $this]);
 
-        if($this->status == null) {
+        if ($this->status == null) {
             $this->status = static::STATUS_PENDING;
         }
         $this->updateState();
 
-        if(!$this->all_day) {
+        if (!$this->all_day) {
             $this->all_day = 1;
         }
 
@@ -190,8 +199,8 @@ class Task extends ContentActiveRecord implements Searchable
 
     public function __set($name, $value)
     {
-        parent::__set($name,$value);
-        if($name == 'status') {
+        parent::__set($name, $value);
+        if ($name == 'status') {
             $this->updateState();
         }
     }
@@ -245,10 +254,10 @@ class Task extends ContentActiveRecord implements Searchable
 
     public function validateTaskList($attribute, $params)
     {
-        if($this->task_list_id) {
+        if ($this->task_list_id) {
             $taskList = TaskList::findByContainer($this->content->container)->where(['id' => $this->task_list_id]);
-            if(!$taskList) {
-                $this->addError('task_list_id',  Yii::t('TasksModule.base', 'Invalid task list selection.'));
+            if (!$taskList) {
+                $this->addError('task_list_id', Yii::t('TasksModule.base', 'Invalid task list selection.'));
             }
         }
     }
@@ -344,7 +353,6 @@ class Task extends ContentActiveRecord implements Searchable
     {
         return self::find()
             ->contentContainer($container)
-            //->orderBy([new Expression('-task.end_datetime DESC')])
             ->readable()
             ->andWhere(['!=', 'task.status', Task::STATUS_COMPLETED]);
     }
@@ -383,6 +391,13 @@ class Task extends ContentActiveRecord implements Searchable
             $taskReminder->delete();
         }
 
+        foreach (TaskAccount::findAll(['task_id' => $this->id]) as $taskAccount) {
+            $account = Account::findOne(['id' => $taskAccount->account_id]);
+            $account->delete();
+
+            $taskAccount->delete();
+        }
+
         return parent::beforeDelete();
     }
 
@@ -397,20 +412,22 @@ class Task extends ContentActiveRecord implements Searchable
     {
         parent::afterSave($insert, $changedAttributes);
 
-        if($this->scenario === self::SCENARIO_EDIT) {
+        if ($this->scenario === self::SCENARIO_EDIT) {
             $oldTaskUsers = $this->taskUsers;
 
             TaskUser::deleteAll(['task_id' => $this->id]);
+
+            $this->manageTaskAccount();
 
             if (!empty($this->assignedUsers)) {
                 foreach ($this->assignedUsers as $guid) {
                     $user = User::findOne(['guid' => $guid]);
 
-                    if(!$user) {
+                    if (!$user) {
                         continue;
                     }
 
-                    $oldAssigned = array_filter($oldTaskUsers, function($taskUser) use ($user) {
+                    $oldAssigned = array_filter($oldTaskUsers, function ($taskUser) use ($user) {
                         /** @var $taskUser TaskUser */
                         return $taskUser->user_id === $user->id && $taskUser->user_type === Task::USER_ASSIGNED;
                     });
@@ -422,11 +439,11 @@ class Task extends ContentActiveRecord implements Searchable
                 foreach ($this->responsibleUsers as $guid) {
                     $user = User::findOne(['guid' => $guid]);
 
-                    if(!$user) {
+                    if (!$user) {
                         continue;
                     }
 
-                    $oldResponsible = array_filter($oldTaskUsers, function($taskUser) use ($user) {
+                    $oldResponsible = array_filter($oldTaskUsers, function ($taskUser) use ($user) {
                         /** @var $taskUser TaskUser */
                         return $taskUser->user_id === $user->id && $taskUser->user_type === Task::USER_RESPONSIBLE;
                     });
@@ -442,7 +459,7 @@ class Task extends ContentActiveRecord implements Searchable
 
         }
 
-        if($this->list) {
+        if ($this->list) {
             $this->list->setAttributes(['updated_at' => new Expression('NOW()')]);
         }
     }
@@ -451,7 +468,7 @@ class Task extends ContentActiveRecord implements Searchable
     {
 
         foreach ($this->taskUsers as $taskUser) {
-            if(!$container->isMember($taskUser->user_id)) {
+            if (!$container->isMember($taskUser->user_id)) {
                 $taskUser->delete();
             }
         }
@@ -468,7 +485,7 @@ class Task extends ContentActiveRecord implements Searchable
     {
         $query = $this->hasMany(User::class, ['id' => 'user_id'])->via('assignedTaskUsers');
 
-        if($filterOutResponsibleUsers) {
+        if ($filterOutResponsibleUsers) {
             $responsible = $this->getTaskResponsibleUsers()->select(['id']);
             $query->where(['not in', 'user.id', $responsible]);
         }
@@ -517,7 +534,7 @@ class Task extends ContentActiveRecord implements Searchable
      */
     public function afterDelete()
     {
-        if($this->list) {
+        if ($this->list) {
             $this->list->setAttributes(['updated_at' => new Expression('NOW()')]);
         }
 
@@ -694,7 +711,6 @@ class Task extends ContentActiveRecord implements Searchable
     }
 
 
-
     /**
      * Sets the newItems array, which is used for creating and updating (afterSave)
      * the task, by saving all valid item title contained in the given array.
@@ -781,13 +797,13 @@ class Task extends ContentActiveRecord implements Searchable
      */
     public function canEdit()
     {
-        if($this->isNewRecord) {
+        if ($this->isNewRecord) {
             return $this->content->container->can([CreateTask::class, ManageTasks::class]);
-        } else if(!$this->hasTaskResponsible()) {
-            return  $this->content->container->can([ManageTasks::class]);
+        } else if (!$this->hasTaskResponsible()) {
+            return $this->content->container->can([ManageTasks::class]);
         }
 
-        return  $this->isTaskResponsible();
+        return $this->isTaskResponsible();
     }
 
     // ###########  handle notifications  ###########
@@ -815,8 +831,7 @@ class Task extends ContentActiveRecord implements Searchable
             foreach ($notifications as $notification) {
                 $notification->delete();
             }
-        }
-        else {
+        } else {
             // delete specific old notifications
             $notifications = Notification::find()->where(['class' => $notificationClassName, 'source_class' => self::class, 'source_pk' => $this->id, 'space_id' => $this->content->container->id])->all();
             foreach ($notifications as $notification) {
@@ -875,11 +890,11 @@ class Task extends ContentActiveRecord implements Searchable
      */
     public function canProcess($user = null)
     {
-        if(!$user && Yii::$app->user->isGuest) {
+        if (!$user && Yii::$app->user->isGuest) {
             return false;
         }
 
-        if(!$user) {
+        if (!$user) {
             $user = Yii::$app->user->getIdentity();
         }
 
@@ -927,9 +942,6 @@ class Task extends ContentActiveRecord implements Searchable
         return (self::isTaskResponsible() && (!self::isCompleted()));
     }
 
-
-
-
     // ###########  handle view-specific  ###########
 
     /**
@@ -939,7 +951,6 @@ class Task extends ContentActiveRecord implements Searchable
      */
     public function getPercent()
     {
-//        $denominator = TaskItem::find()->where(['task_id' => $this->id])->count();
         $denominator = $this->getItems()->count();
         // add STATUS_IN_PROGRESS and STATUS_COMPLETED
         $denominator += 2;
@@ -1004,6 +1015,7 @@ class Task extends ContentActiveRecord implements Searchable
     /**
      * @throws \Exception
      * @throws \yii\db\StaleObjectException
+     * @throws \Throwable
      */
     public function beforeRemoveUser()
     {
@@ -1015,9 +1027,10 @@ class Task extends ContentActiveRecord implements Searchable
 
     /**
      * @param $userId
-     * @return boolw
+     * @return bool
      * @throws \Exception
      * @throws \yii\db\StaleObjectException
+     * @throws \Throwable
      */
     public function removeUser($userId)
     {
@@ -1037,8 +1050,58 @@ class Task extends ContentActiveRecord implements Searchable
 
     public function getColor()
     {
-        if($this->task_list_id && $this->list) {
+        if ($this->task_list_id && $this->list) {
             return $this->list->getColor();
         }
+    }
+
+    // ###########  handle task related account  ###########
+
+    public function manageTaskAccount()
+    {
+        $accountTitle = "Task#$this->id ( $this->title )";
+        $accountUserId = empty($this->responsibleUsers) ? null : User::findOne(['guid' => $this->responsibleUsers[0]])->id;
+
+        if (null === ($taskAccount = TaskAccount::findOne(['task_id' => $this->id]))) {
+
+            $account = new Account([
+                'title' => $accountTitle,
+                'space_id' => $this->content->container->id,
+                'account_type' => Account::TYPE_TASK,
+                'user_id' => $accountUserId
+            ]);
+
+            $account->save();
+
+            $taskAccount = new TaskAccount([
+                'task_id' => $this->id,
+                'account_id' => $account->id,
+                'account_type' => self::ACCOUNT_SPACE,
+            ]);
+
+            return $taskAccount->save();
+        } else {
+            $account = Account::findOne(['id' => $taskAccount->account_id]);
+
+            $account->title = $accountTitle;
+            $account->user_id = $accountUserId;
+
+            return $account->save();
+        }
+    }
+
+    public function getTaskAccount()
+    {
+        return $this->hasOne(TaskAccount::class, ['task_id' => 'id']);
+    }
+
+    public function getAccount()
+    {
+        return $this->hasOne(Account::class, ['id' => 'account_id'])->via('taskAccount')->one();
+    }
+
+    public function hasAccount()
+    {
+        return is_null($this->getAccount()) ? false : true;
     }
 }

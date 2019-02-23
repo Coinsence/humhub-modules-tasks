@@ -173,34 +173,6 @@ class Events
             }
         }
 
-//        // check for task responsible users without task or existing user
-//        foreach (TaskResponsible::find()->all() as $taskResponsible) {
-//            if ($taskResponsible->task === null) {
-//                if ($integrityController->showFix("Deleting task responsible user id " . $taskResponsible->id . " without existing task!")) {
-//                    $taskResponsible->delete();
-//                }
-//            }
-//            if ($taskResponsible->user === null) {
-//                if ($integrityController->showFix("Deleting task responsible user id " . $taskResponsible->id . " without existing user!")) {
-//                    $taskResponsible->delete();
-//                }
-//            }
-//        }
-
-//        // check for task assigned users without task or existing user
-//        foreach (TaskAssigned::find()->all() as $taskAssigned) {
-//            if ($taskAssigned->task === null) {
-//                if ($integrityController->showFix("Deleting task assigned user id " . $taskAssigned->id . " without existing task!")) {
-//                    $taskAssigned->delete();
-//                }
-//            }
-//            if ($taskAssigned->user === null) {
-//                if ($integrityController->showFix("Deleting task assigned user id " . $taskAssigned->id . " without existing user!")) {
-//                    $taskAssigned->delete();
-//                }
-//            }
-//        }
-
         // check for task reminders without task
         foreach (TaskReminder::find()->all() as $taskReminder) {
             if ($taskReminder->task === null) {
@@ -231,9 +203,6 @@ class Events
                     $user->delete();
                 }
 
-                // remove notifications
-//                $event->sender->className()
-//                $event->sender->getPrimaryKey()
                 $notifications = Notification::find()->where(['source_class' => Task::className(), 'source_pk' => $task->id, 'space_id' => $event->space->id])->all();
                 foreach ($notifications as $notification) {
                     $notification->delete();

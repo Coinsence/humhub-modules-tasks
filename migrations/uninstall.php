@@ -17,6 +17,7 @@ class uninstall extends Migration
         $this->dropTableSave('task_user');
         $this->dropTableSave('task_item');
         $this->dropTableSave('task_reminder');
+        $this->dropTableSave('task_account');
     }
 
     public function dropFK($name, $table) {
