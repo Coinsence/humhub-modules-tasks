@@ -416,7 +416,9 @@ class Task extends ContentActiveRecord implements Searchable
             $oldTaskUsers = $this->taskUsers;
 
             TaskUser::deleteAll(['task_id' => $this->id]);
+
             $this->manageTaskAccount();
+
             if (!empty($this->assignedUsers)) {
                 foreach ($this->assignedUsers as $guid) {
                     $user = User::findOne(['guid' => $guid]);
@@ -1086,5 +1088,20 @@ class Task extends ContentActiveRecord implements Searchable
 
             return $account->save();
         }
+    }
+
+    public function getTaskAccount()
+    {
+        return $this->hasOne(TaskAccount::class, ['task_id' => 'id']);
+    }
+
+    public function getAccount()
+    {
+        return $this->hasOne(Account::class, ['id' => 'account_id'])->via('taskAccount')->one();
+    }
+
+    public function hasAccount()
+    {
+        return is_null($this->getAccount()) ? false : true;
     }
 }
