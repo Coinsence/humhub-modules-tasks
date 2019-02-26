@@ -96,9 +96,6 @@ $color = $task->getColor() ? $task->getColor() : $this->theme->variable('info');
                         </div>
                     </div>
                 <?php endif ?>
-
-
-
             </div>
         </div>
     </div>

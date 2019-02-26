@@ -17,7 +17,6 @@ use humhub\widgets\Link;
 
 $responsible = $taskForm->task->taskResponsibleUsers;
 
-//array_push($responsible, Yii::$app->user->getIdentity()); // add creator to responsible users
 ?>
 
 <div class="modal-body">
@@ -27,8 +26,9 @@ $responsible = $taskForm->task->taskResponsibleUsers;
         'id' => 'taskAssignedUserPicker',
         'selection' => $taskForm->task->taskAssignedUsers,
         'url' => $taskForm->getTaskAssignedPickerUrl(),
-        'placeholder' => Yii::t('TasksModule.views_index_edit', 'Assign users')
-    ])->hint(Yii::t('TasksModule.views_index_edit', 'Leave empty to let anyone work on this task.'),[]) ?>
+        'placeholder' => Yii::t('TasksModule.views_index_edit', 'Assign users'),
+        'maxSelection' => 1,
+    ])->hint(Yii::t('TasksModule.views_index_edit', 'Leave empty to let anyone work on this task.'), []) ?>
 
     <?= Link::userPickerSelfSelect('#taskAssignedUserPicker'); ?>
 
@@ -39,6 +39,7 @@ $responsible = $taskForm->task->taskResponsibleUsers;
         'selection' => $responsible,
         'url' => $taskForm->getTaskResponsiblePickerUrl(),
         'placeholder' => Yii::t('TasksModule.views_index_edit', 'Add responsible users'),
+        'maxSelection' => 1,
     ]) ?>
 
     <?= Link::userPickerSelfSelect('#taskResponsibleUserPicker'); ?>

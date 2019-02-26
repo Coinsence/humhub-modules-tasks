@@ -336,13 +336,9 @@ class TaskScheduling extends Component
 
 
         $result = [
-//            'id' => $this->id,
             'title' => $title,
-//            'editable' => ($this->content->canEdit() || self::isTaskResponsible()),
             'editable' => false,
-            //'color' => $color ? $color : TaskCalendar::DEFAULT_COLOR,
             'allDay' => $this->task->all_day,
-            //'updateUrl' => $this->task->content->container->createUrl('/tasks/task/edit-ajax', ['id' => $this->task->id]),
             'viewUrl' => TaskUrl::viewTaskModal($this->task, 1),
             'openUrl' => TaskUrl::viewTask($this->task),
             'start' => $end,
