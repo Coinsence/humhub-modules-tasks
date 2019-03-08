@@ -123,8 +123,8 @@ class Task extends ContentActiveRecord implements Searchable
     /**
      * Account Type
      */
-    const ACCOUNT_SPACE = 0;
-    const ACCOUNT_WORKER = 1;
+    const SPACE_ACCOUNT = 0;
+    const WORKER_ACCOUNT = 1;
 
     /**
      * @var TaskState
@@ -391,11 +391,11 @@ class Task extends ContentActiveRecord implements Searchable
             $taskReminder->delete();
         }
 
-        foreach (TaskAccount::findAll(['task_id' => $this->id]) as $taskAccount) {
-            $account = Account::findOne(['id' => $taskAccount->account_id]);
-            $account->delete();
+        foreach (TaskAccount::findAll(['task_id' => $this->id]) as $taskSpaceAccount) {
+            $spaceAccount = Account::findOne(['id' => $taskSpaceAccount->account_id]);
+            $spaceAccount->delete();
 
-            $taskAccount->delete();
+            $taskSpaceAccount->delete();
         }
 
         return parent::beforeDelete();
@@ -417,7 +417,7 @@ class Task extends ContentActiveRecord implements Searchable
 
             TaskUser::deleteAll(['task_id' => $this->id]);
 
-            $this->manageTaskAccount();
+            $this->manageSpaceAccount();
 
             if (!empty($this->assignedUsers)) {
                 foreach ($this->assignedUsers as $guid) {
@@ -1055,53 +1055,58 @@ class Task extends ContentActiveRecord implements Searchable
         }
     }
 
-    // ###########  handle task related account  ###########
+    // ###########  handle task related accounts  ###########
 
-    public function manageTaskAccount()
+    public function manageSpaceAccount()
     {
-        $accountTitle = "Task#$this->id ( $this->title )";
-        $accountUserId = empty($this->responsibleUsers) ? null : User::findOne(['guid' => $this->responsibleUsers[0]])->id;
+        $spaceAccountTitle = "Task#$this->id ( $this->title )";
+        $spaceAccountUserId = empty($this->responsibleUsers) ? null : User::findOne(['guid' => $this->responsibleUsers[0]])->id;
 
-        if (null === ($taskAccount = TaskAccount::findOne(['task_id' => $this->id]))) {
+        if (null === ($taskSpaceAccount = TaskAccount::findOne(['task_id' => $this->id]))) {
 
-            $account = new Account([
-                'title' => $accountTitle,
+            $spaceAccount = new Account([
+                'title' => $spaceAccountTitle,
                 'space_id' => $this->content->container->id,
                 'account_type' => Account::TYPE_TASK,
-                'user_id' => $accountUserId
+                'user_id' => $spaceAccountUserId
             ]);
 
-            $account->save();
+            $spaceAccount->save();
 
-            $taskAccount = new TaskAccount([
+            $taskSpaceAccount = new TaskAccount([
                 'task_id' => $this->id,
-                'account_id' => $account->id,
-                'account_type' => self::ACCOUNT_SPACE,
+                'account_id' => $spaceAccount->id,
+                'account_type' => self::SPACE_ACCOUNT,
             ]);
 
-            return $taskAccount->save();
+            return $taskSpaceAccount->save();
         } else {
-            $account = Account::findOne(['id' => $taskAccount->account_id]);
+            $spaceAccount = Account::findOne(['id' => $taskSpaceAccount->account_id]);
 
-            $account->title = $accountTitle;
-            $account->user_id = $accountUserId;
+            $spaceAccount->title = $spaceAccountTitle;
+            $spaceAccount->user_id = $spaceAccountUserId;
 
-            return $account->save();
+            return $spaceAccount->save();
         }
     }
 
-    public function getTaskAccount()
+    public function getTaskAccounts()
     {
-        return $this->hasOne(TaskAccount::class, ['task_id' => 'id']);
+        return $this->hasMany(TaskAccount::class, ['task_id' => 'id']);
     }
 
-    public function getAccount()
+    public function getAccount($accountType)
     {
-        return $this->hasOne(Account::class, ['id' => 'account_id'])->via('taskAccount')->one();
+        return $this
+            ->hasOne(Account::class, ['id' => 'account_id'])
+            ->via('taskAccount', function ($query) use ($accountType) {
+                $query->andWhere(['account_type' => $accountType]);
+            })
+            ->one();
     }
 
-    public function hasAccount()
+    public function hasAccount($accountType)
     {
-        return is_null($this->getAccount()) ? false : true;
+        return is_null($this->getAccount($accountType)) ? false : true;
     }
 }
