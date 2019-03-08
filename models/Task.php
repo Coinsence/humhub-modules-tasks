@@ -1099,7 +1099,7 @@ class Task extends ContentActiveRecord implements Searchable
     {
         return $this
             ->hasOne(Account::class, ['id' => 'account_id'])
-            ->via('taskAccount', function ($query) use ($accountType) {
+            ->via('taskAccounts', function ($query) use ($accountType) {
                 $query->andWhere(['account_type' => $accountType]);
             })
             ->one();
