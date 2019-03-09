@@ -3,6 +3,7 @@
 namespace humhub\modules\tasks\controllers;
 
 use humhub\modules\tasks\helpers\TaskUrl;
+use humhub\modules\tasks\models\account\TaskAccount;
 use Yii;
 use yii\web\HttpException;
 use humhub\modules\content\components\ContentContainerControllerAccess;
@@ -217,5 +218,20 @@ class TaskController extends AbstractTaskController
         }
 
         return $this->asJson(['success' => false]);
+    }
+
+    public function actionChooseWorkerAccount($id, $accountId)
+    {
+        $this->forcePostRequest();
+
+        $taskSpaceAccount = new TaskAccount([
+            'task_id' => $id,
+            'account_id' => $accountId,
+            'account_type' => Task::WORKER_ACCOUNT,
+        ]);
+
+        $taskSpaceAccount->save();
+
+        return $this->asJson(['success' => true]);
     }
 }

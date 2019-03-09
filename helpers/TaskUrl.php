@@ -40,6 +40,7 @@ class TaskUrl extends Url
     const ROUTE_GLOBAL_FILTER = '/tasks/global/filter';
 
     const ROUTE_CONFIG = '/tasks/config';
+    const ROUTE_CHOOSE_WORKER_ACCOUNT = '/tasks/task/choose-worker-account';
 
     public static function toConfig()
     {
@@ -126,6 +127,10 @@ class TaskUrl extends Url
         return static::container($task)->createUrl(static::ROUTE_CHECK_CHECKLIST_ITEM, ['id' => $item->id, 'taskId' => $task->id]);
     }
 
+    public static function chooseWorkerAccount(Task $task, $accountId)
+    {
+        return static::container($task)->createUrl(static::ROUTE_CHOOSE_WORKER_ACCOUNT, ['id' => $task->id, 'accountId' => $accountId]);
+    }
 
     /**
      * @param $obj
