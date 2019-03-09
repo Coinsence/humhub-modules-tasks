@@ -1,7 +1,7 @@
 <?php
 /* @var $this \humhub\components\View */
 
-use humhub\modules\comment\widgets\Comments;
+use humhub\modules\content\widgets\richtext\RichText;
 use humhub\modules\content\widgets\WallEntryAddons;
 use humhub\modules\tasks\helpers\TaskUrl;
 use humhub\modules\tasks\models\Task;
@@ -12,7 +12,6 @@ use humhub\modules\tasks\widgets\TaskInfoBox;
 use humhub\modules\tasks\widgets\checklist\TaskChecklist;
 use humhub\modules\tasks\widgets\TaskRoleInfoBox;
 use humhub\widgets\Button;
-use humhub\widgets\MarkdownView;
 
 /* @var $task \humhub\modules\tasks\models\Task */
 
@@ -26,6 +25,8 @@ if (($task->schedule->isOverdue())) {
 <div class="task-list-task-details">
 
     <div class="task-list-task-details-body clearfix">
+
+
         <div class="task-list-task-infos">
             <?= TaskRoleInfoBox::widget(['task' => $task]) ?>
 
@@ -46,6 +47,7 @@ if (($task->schedule->isOverdue())) {
                 </div>
             <?php endif; ?>
 
+
             <?php if (!$task->hasAccount(Task::WORKER_ACCOUNT)): ?>
                 <?= ChooseWorkerAccountButton::widget(['task' => $task]) ?>
             <?php else: ?>
@@ -54,9 +56,17 @@ if (($task->schedule->isOverdue())) {
 
         </div>
 
-        <?= MarkdownView::widget(['markdown' => $task->description]); ?>
+        <?php if(!empty($task->description)) : ?>
+            <div class="task-details-body">
+                <?= RichText::output($task->description)?>
+            </div>
+        <?php endif; ?>
 
-        <?= TaskChecklist::widget(['task' => $task]) ?>
+        <?php if($task->hasItems()) : ?>
+            <div class="task-details-body">
+                <?= TaskChecklist::widget(['task' => $task]) ?>
+            </div>
+        <?php endif; ?>
 
     </div>
 
