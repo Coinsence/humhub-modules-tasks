@@ -454,6 +454,8 @@ class Task extends ContentActiveRecord implements Searchable
                 }
             }
 
+            $this->deleteOldWorkerAccount();
+
             $this->checklist->afterSave($insert);
             $this->schedule->afterSave($insert, $changedAttributes);
 
@@ -792,6 +794,12 @@ class Task extends ContentActiveRecord implements Searchable
         return $this->review && $this->isTaskResponsible($user);
     }
 
+    public function canChooseWorkAccount()
+    {
+
+        return $this->isTaskAssigned(Yii::$app->user) || $this->isTaskResponsible(Yii::$app->user);
+    }
+    
     /**
      * Additional canEdit check for responsible users.
      * @return bool
@@ -1110,5 +1118,17 @@ class Task extends ContentActiveRecord implements Searchable
     public function hasAccount($accountType)
     {
         return is_null($this->getAccount($accountType)) ? false : true;
+    }
+
+    private function deleteOldWorkerAccount()
+    {
+        if ($this->hasAccount(Task::WORKER_ACCOUNT) && $this->assignedUsers[0] != $this->getWorker()) {
+            $this->getAccount(Task::WORKER_ACCOUNT)->delete();
+        }
+    }
+
+    private function getWorker()
+    {
+        return User::findOne(['id' => $this->getAccount(Task::WORKER_ACCOUNT)->user_id])->guid;
     }
 }
