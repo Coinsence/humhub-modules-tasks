@@ -417,7 +417,10 @@ class Task extends ContentActiveRecord implements Searchable
         if ($this->scenario === self::SCENARIO_EDIT) {
             $oldTaskUsers = $this->taskUsers;
 
-            TaskUser::deleteAll(['task_id' => $this->id]);
+            if ($this->isPending())
+                TaskUser::deleteAll(['task_id' => $this->id]);
+            else
+                TaskUser::deleteAll(['task_id' => $this->id, 'user_type' => Task::USER_RESPONSIBLE]);
 
             $this->manageSpaceAccount();
 
@@ -1127,7 +1130,11 @@ class Task extends ContentActiveRecord implements Searchable
 
     private function deleteOldWorkerTaskAccount()
     {
-        if ($this->hasAccount(Task::WORKER_ACCOUNT) && $this->assignedUsers[0] != $this->getWorker()) {
+        if (
+            $this->hasAccount(Task::WORKER_ACCOUNT) &&
+            $this->assignedUsers[0] != $this->getWorker() &&
+            $this->isPending()
+        ) {
             $this->getTaskAccount(Task::WORKER_ACCOUNT)->delete();
         }
     }
