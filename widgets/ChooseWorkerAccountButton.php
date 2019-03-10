@@ -22,7 +22,7 @@ class ChooseWorkerAccountButton extends Widget
     public function run()
     {
         $workerAccounts = Account::findAll([
-            'user_id' => $this->task->taskAssignedUsers[0],
+            'user_id' => $this->task->taskAssignedUsers[0]->id,
             'space_id' => null
         ]);
 
