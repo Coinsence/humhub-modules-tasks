@@ -391,11 +391,13 @@ class Task extends ContentActiveRecord implements Searchable
             $taskReminder->delete();
         }
 
-        foreach (TaskAccount::findAll(['task_id' => $this->id]) as $taskAccount) {
-            $account = Account::findOne(['id' => $taskAccount->account_id]);
-            $account->delete();
+        foreach (TaskAccount::findAll(['task_id' => $this->id]) as $taskSpaceAccount) {
+            if ($taskSpaceAccount->account_type == Task::ACCOUNT_SPACE) {
+                $spaceAccount = Account::findOne(['id' => $taskSpaceAccount->account_id]);
+                $spaceAccount->delete();
+            }
 
-            $taskAccount->delete();
+            $taskSpaceAccount->delete();
         }
 
         return parent::beforeDelete();
@@ -415,9 +417,12 @@ class Task extends ContentActiveRecord implements Searchable
         if ($this->scenario === self::SCENARIO_EDIT) {
             $oldTaskUsers = $this->taskUsers;
 
-            TaskUser::deleteAll(['task_id' => $this->id]);
+            if ($this->isPending())
+                TaskUser::deleteAll(['task_id' => $this->id]);
+            else
+                TaskUser::deleteAll(['task_id' => $this->id, 'user_type' => Task::USER_RESPONSIBLE]);
 
-            $this->manageTaskAccount();
+            $this->manageSpaceAccount();
 
             if (!empty($this->assignedUsers)) {
                 foreach ($this->assignedUsers as $guid) {
@@ -451,6 +456,8 @@ class Task extends ContentActiveRecord implements Searchable
                     $this->addTaskResponsible($guid, empty($oldResponsible));
                 }
             }
+
+            $this->deleteOldWorkerTaskAccount();
 
             $this->checklist->afterSave($insert);
             $this->schedule->afterSave($insert, $changedAttributes);
@@ -790,6 +797,12 @@ class Task extends ContentActiveRecord implements Searchable
         return $this->review && $this->isTaskResponsible($user);
     }
 
+    public function canChooseWorkAccount()
+    {
+
+        return $this->isTaskAssigned(Yii::$app->user) || $this->isTaskResponsible(Yii::$app->user);
+    }
+
     /**
      * Additional canEdit check for responsible users.
      * @return bool
@@ -1055,53 +1068,79 @@ class Task extends ContentActiveRecord implements Searchable
         }
     }
 
-    // ###########  handle task related account  ###########
+    // ###########  handle task related accounts  ###########
 
-    public function manageTaskAccount()
+    public function manageSpaceAccount()
     {
-        $accountTitle = "Task#$this->id ( $this->title )";
-        $accountUserId = empty($this->responsibleUsers) ? null : User::findOne(['guid' => $this->responsibleUsers[0]])->id;
+        $spaceAccountTitle = "Task#$this->id ( $this->title )";
+        $spaceAccountUserId = empty($this->responsibleUsers) ? null : User::findOne(['guid' => $this->responsibleUsers[0]])->id;
 
-        if (null === ($taskAccount = TaskAccount::findOne(['task_id' => $this->id]))) {
+        if (null === ($taskSpaceAccount = TaskAccount::findOne(['task_id' => $this->id]))) {
 
-            $account = new Account([
-                'title' => $accountTitle,
+            $spaceAccount = new Account([
+                'title' => $spaceAccountTitle,
                 'space_id' => $this->content->container->id,
                 'account_type' => Account::TYPE_TASK,
-                'user_id' => $accountUserId
+                'user_id' => $spaceAccountUserId
             ]);
 
-            $account->save();
+            $spaceAccount->save();
 
-            $taskAccount = new TaskAccount([
+            $taskSpaceAccount = new TaskAccount([
                 'task_id' => $this->id,
-                'account_id' => $account->id,
+                'account_id' => $spaceAccount->id,
                 'account_type' => self::ACCOUNT_SPACE,
             ]);
 
-            return $taskAccount->save();
+            return $taskSpaceAccount->save();
         } else {
-            $account = Account::findOne(['id' => $taskAccount->account_id]);
+            $spaceAccount = Account::findOne(['id' => $taskSpaceAccount->account_id]);
 
-            $account->title = $accountTitle;
-            $account->user_id = $accountUserId;
+            $spaceAccount->title = $spaceAccountTitle;
+            $spaceAccount->user_id = $spaceAccountUserId;
 
-            return $account->save();
+            return $spaceAccount->save();
         }
     }
 
-    public function getTaskAccount()
+    public function getTaskAccounts()
     {
-        return $this->hasOne(TaskAccount::class, ['task_id' => 'id']);
+        return $this->hasMany(TaskAccount::class, ['task_id' => 'id']);
     }
 
-    public function getAccount()
+    public function getTaskAccount($accountType)
     {
-        return $this->hasOne(Account::class, ['id' => 'account_id'])->via('taskAccount')->one();
+        return $this->getTaskAccounts()->filterWhere(['account_type' => $accountType])->one();
     }
 
-    public function hasAccount()
+    public function getAccount($accountType)
     {
-        return is_null($this->getAccount()) ? false : true;
+        return $this
+            ->hasOne(Account::class, ['id' => 'account_id'])
+            ->via('taskAccounts', function ($query) use ($accountType) {
+                $query->andWhere(['account_type' => $accountType]);
+            })
+            ->one();
+    }
+
+    public function hasAccount($accountType)
+    {
+        return is_null($this->getAccount($accountType)) ? false : true;
+    }
+
+    private function deleteOldWorkerTaskAccount()
+    {
+        if (
+            $this->hasAccount(Task::ACCOUNT_WORKER) &&
+            $this->assignedUsers[0] != $this->getWorker() &&
+            $this->isPending()
+        ) {
+            $this->getTaskAccount(Task::ACCOUNT_WORKER)->delete();
+        }
+    }
+
+    private function getWorker()
+    {
+        return User::findOne(['id' => $this->getAccount(Task::ACCOUNT_WORKER)->user_id])->guid;
     }
 }
