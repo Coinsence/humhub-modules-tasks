@@ -17,6 +17,7 @@ use humhub\modules\tasks\permissions\ProcessUnassignedTasks;
 use humhub\modules\user\components\ActiveQueryUser;
 use humhub\modules\xcoin\helpers\AccountHelper;
 use humhub\modules\xcoin\models\Account;
+use humhub\modules\xcoin\models\Transaction;
 use Yii;
 use yii\db\ActiveQuery;
 use yii\db\Expression;
@@ -394,6 +395,10 @@ class Task extends ContentActiveRecord implements Searchable
         foreach (TaskAccount::findAll(['task_id' => $this->id]) as $taskSpaceAccount) {
             if ($taskSpaceAccount->account_type == Task::ACCOUNT_SPACE) {
                 $spaceAccount = Account::findOne(['id' => $taskSpaceAccount->account_id]);
+
+                // returning coins present in task account to their original accounts
+                $this->refund($spaceAccount);
+
                 $spaceAccount->delete();
             }
 
@@ -1142,5 +1147,17 @@ class Task extends ContentActiveRecord implements Searchable
     private function getWorker()
     {
         return User::findOne(['id' => $this->getAccount(Task::ACCOUNT_WORKER)->user_id])->guid;
+    }
+
+    /**
+     * Delete all transactions where Task Space Account is the target account
+     *
+     * @param $account
+     */
+    private function refund($account){
+        $incomeTransactions = Transaction::findAll(['to_account_id' => $account->id]);
+        foreach ($incomeTransactions as $transaction){
+            $transaction->delete();
+        }
     }
 }
