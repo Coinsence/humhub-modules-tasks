@@ -227,7 +227,7 @@ class TaskController extends AbstractTaskController
         $taskSpaceAccount = new TaskAccount([
             'task_id' => $id,
             'account_id' => $accountId,
-            'account_type' => Task::WORKER_ACCOUNT,
+            'account_type' => Task::ACCOUNT_WORKER,
         ]);
 
         $taskSpaceAccount->save();

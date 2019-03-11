@@ -20,7 +20,7 @@ class PaymentAccountBox extends TaskInfoBox
 
     public function getValue()
     {
-        return $this->task->getAccount(Task::WORKER_ACCOUNT)->title;
+        return $this->task->getAccount(Task::ACCOUNT_WORKER)->title;
     }
 
 

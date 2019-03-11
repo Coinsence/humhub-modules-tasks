@@ -123,8 +123,8 @@ class Task extends ContentActiveRecord implements Searchable
     /**
      * Account Type
      */
-    const SPACE_ACCOUNT = 0;
-    const WORKER_ACCOUNT = 1;
+    const ACCOUNT_SPACE = 0;
+    const ACCOUNT_WORKER = 1;
 
     /**
      * @var TaskState
@@ -392,7 +392,7 @@ class Task extends ContentActiveRecord implements Searchable
         }
 
         foreach (TaskAccount::findAll(['task_id' => $this->id]) as $taskSpaceAccount) {
-            if ($taskSpaceAccount->account_type == Task::SPACE_ACCOUNT) {
+            if ($taskSpaceAccount->account_type == Task::ACCOUNT_SPACE) {
                 $spaceAccount = Account::findOne(['id' => $taskSpaceAccount->account_id]);
                 $spaceAccount->delete();
             }
@@ -1089,7 +1089,7 @@ class Task extends ContentActiveRecord implements Searchable
             $taskSpaceAccount = new TaskAccount([
                 'task_id' => $this->id,
                 'account_id' => $spaceAccount->id,
-                'account_type' => self::SPACE_ACCOUNT,
+                'account_type' => self::ACCOUNT_SPACE,
             ]);
 
             return $taskSpaceAccount->save();
@@ -1131,16 +1131,16 @@ class Task extends ContentActiveRecord implements Searchable
     private function deleteOldWorkerTaskAccount()
     {
         if (
-            $this->hasAccount(Task::WORKER_ACCOUNT) &&
+            $this->hasAccount(Task::ACCOUNT_WORKER) &&
             $this->assignedUsers[0] != $this->getWorker() &&
             $this->isPending()
         ) {
-            $this->getTaskAccount(Task::WORKER_ACCOUNT)->delete();
+            $this->getTaskAccount(Task::ACCOUNT_WORKER)->delete();
         }
     }
 
     private function getWorker()
     {
-        return User::findOne(['id' => $this->getAccount(Task::WORKER_ACCOUNT)->user_id])->guid;
+        return User::findOne(['id' => $this->getAccount(Task::ACCOUNT_WORKER)->user_id])->guid;
     }
 }
