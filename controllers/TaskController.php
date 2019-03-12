@@ -89,6 +89,10 @@ class TaskController extends AbstractTaskController
             throw new HttpException(403);
         }
 
+        if(Task::STATUS_COMPLETED == $status){
+            $task->payWorker();
+        }
+
         return $this->asJson(['success' => $task->state->proceed($status)]);
     }
 
@@ -100,6 +104,8 @@ class TaskController extends AbstractTaskController
         if(!$task->state->canRevert($status)) {
             throw new HttpException(403);
         }
+
+        $task->refund();
 
         return $this->asJson(['success' => $task->state->revert($status)]);
     }
