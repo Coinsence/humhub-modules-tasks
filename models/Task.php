@@ -17,6 +17,7 @@ use humhub\modules\tasks\permissions\ProcessUnassignedTasks;
 use humhub\modules\user\components\ActiveQueryUser;
 use humhub\modules\xcoin\helpers\AccountHelper;
 use humhub\modules\xcoin\models\Account;
+use humhub\modules\xcoin\models\Transaction;
 use Yii;
 use yii\db\ActiveQuery;
 use yii\db\Expression;
@@ -391,14 +392,23 @@ class Task extends ContentActiveRecord implements Searchable
             $taskReminder->delete();
         }
 
+        if ($this->isCompleted()) {
+            $this->mutateTransactions();
+        } else {
+            // returning coins present in task account to their original accounts
+            $this->refund();
+        }
+
         foreach (TaskAccount::findAll(['task_id' => $this->id]) as $taskSpaceAccount) {
             if ($taskSpaceAccount->account_type == Task::ACCOUNT_SPACE) {
                 $spaceAccount = Account::findOne(['id' => $taskSpaceAccount->account_id]);
+
                 $spaceAccount->delete();
             }
 
             $taskSpaceAccount->delete();
         }
+
 
         return parent::beforeDelete();
     }
@@ -1142,5 +1152,71 @@ class Task extends ContentActiveRecord implements Searchable
     private function getWorker()
     {
         return User::findOne(['id' => $this->getAccount(Task::ACCOUNT_WORKER)->user_id])->guid;
+    }
+
+    /**
+     * revert all transactions where task space account is the target account
+     */
+    public function refund()
+    {
+        $incomeTransactions = Transaction::findAll(['to_account_id' => $this->getAccount(Task::ACCOUNT_SPACE)->id]);
+
+        foreach ($incomeTransactions as $transaction) {
+            $transaction->delete();
+        }
+    }
+
+
+    /**
+     * Transfer coins from task space account to worker target account
+     */
+    public function payWorker()
+    {
+        $fromAccount = $this->getAccount(Task::ACCOUNT_SPACE);
+        $toAccount = $this->getAccount(Task::ACCOUNT_WORKER);
+
+        foreach ($fromAccount->getAssets() as $asset) {
+            $incomeTransactions = Transaction::findAll([
+                'asset_id' => $asset->id,
+                'to_account_id' => $fromAccount->id
+            ]);
+
+            foreach ($incomeTransactions as $transaction) {
+                $outcomeTransaction = new Transaction();
+                $outcomeTransaction->transaction_type = Transaction::TRANSACTION_TYPE_TASK_PAYMENT;
+                $outcomeTransaction->from_account_id = $fromAccount->id;
+                $outcomeTransaction->to_account_id = $toAccount->id;
+                $outcomeTransaction->asset_id = $asset->id;
+                $outcomeTransaction->amount = $transaction->amount;
+                $outcomeTransaction->comment = "Payment for <<{$this->title}>> task";
+
+                $outcomeTransaction->save();
+            }
+        }
+    }
+
+    /**
+     * detach all associated transactions from space task account an link them to default one
+     */
+    public function mutateTransactions()
+    {
+        $defaultSpaceAccount = Account::findOne([
+            'space_id' => $this->content->container->id,
+            'account_type' => Account::TYPE_DEFAULT
+        ]);
+
+        $taskSpaceAccount = $this->getAccount(Task::ACCOUNT_SPACE);
+
+        // update income transactions
+        Transaction::updateAll(
+            ['to_account_id' => $defaultSpaceAccount->id],
+            ['to_account_id' => $taskSpaceAccount->id]
+        );
+
+        // update outcome transactions
+        Transaction::updateAll(
+            ['from_account_id' => $defaultSpaceAccount->id],
+            ['from_account_id' => $taskSpaceAccount->id]
+        );
     }
 }
