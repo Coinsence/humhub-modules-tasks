@@ -44,6 +44,7 @@ class Events
             return;
         }
 
+        /*
         // Is Module enabled on this workspace?
         $event->sender->addItem([
             'label' => Yii::t('TasksModule.base', 'Tasks'),
@@ -53,6 +54,7 @@ class Events
             'sortOrder' => $module->topMenuSort,
             'isActive' => (Yii::$app->controller->module && Yii::$app->controller->module->id == 'tasks' && Yii::$app->controller->id == 'global'),
         ]);
+        */
     }
 
     /**
