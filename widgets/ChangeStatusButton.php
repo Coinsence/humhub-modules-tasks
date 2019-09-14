@@ -5,6 +5,7 @@ namespace humhub\modules\tasks\widgets;
 
 
 use humhub\components\Widget;
+use humhub\modules\tasks\models\state\CompletedState;
 use humhub\modules\tasks\models\Task;
 use humhub\widgets\Button;
 
@@ -23,6 +24,11 @@ class ChangeStatusButton extends Widget
         $state = $this->task->state;
         $proceedConfig = $state->getProceedConfig();
         $revertConfig = $state->getRevertConfig();
+
+        // disable reset action if task is completed
+        if($state instanceof CompletedState) {
+            return '';
+        }
 
         if(empty($proceedConfig) && empty($revertConfig)) {
             return '';
