@@ -15,7 +15,7 @@ use humhub\widgets\Button;
 <div class="btn-group pull-right task-change-state-button">
     <?= Button::primary($primaryStateConfig['label'])->action('task.changeState', $primaryUrl)->sm()->icon($primaryStateConfig['icon'])->loader(true);?>
 
-    <?php if(!empty($proceedConfig) || !empty($revertConfig)) : ?>
+    <?php /*  if(!empty($proceedConfig) || !empty($revertConfig)) : ?>
         <button type="button" class="btn btn-primary btn-sm dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
             <span class="caret"></span>
             <span class="sr-only">Toggle Dropdown</span>
@@ -40,5 +40,5 @@ use humhub\widgets\Button;
             <?php endforeach; ?>
         </ul>
 
-    <?php endif; ?>
+    <?php endif; */?>
 </div>
