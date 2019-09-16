@@ -11,7 +11,7 @@ use humhub\widgets\Link;
 use humhub\widgets\ModalButton;
 ?>
 
-<?php /*
+<?php if(!$isCompleted) : ?>
 <div class="pull-right">
     <ul class="nav nav-pills preferences">
         <li class="dropdown">
@@ -38,4 +38,4 @@ use humhub\widgets\ModalButton;
         </li>
     </ul>
 </div>
- */?>
+<?php endif; ?>

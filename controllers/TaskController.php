@@ -48,15 +48,18 @@ class TaskController extends AbstractTaskController
             $taskForm = new TaskForm(['cal' => $cal, 'taskListId' => $listId]);
             $taskForm->createNew($this->contentContainer);
         } else {
+            $task = Task::find()->contentContainer($this->contentContainer)->where(['task.id' => $id])->one();
 
-            /*$taskForm = new TaskForm([
-                'task' => Task::find()->contentContainer($this->contentContainer)->where(['task.id' => $id])->one(),
+            if ($task->isCompleted()) {
+                throw new HttpException(403);
+            }
+
+            $taskForm = new TaskForm([
+                'task' => $task,
                 'cal' => $cal,
                 'redirect' => $redirect,
                 'taskListId' => $listId
-            ]);*/
-
-            return $this->htmlRedirect(['/tasks/list', 'container' => $this->contentContainer]);
+            ]);
         }
 
         if (!$taskForm->task) {
@@ -112,7 +115,7 @@ class TaskController extends AbstractTaskController
 
         return $this->asJson(['success' => $task->state->revert($status)]);*/
 
-        return $this->htmlRedirect(['/tasks/list', 'container' => $this->contentContainer]);
+        throw new HttpException(403);
     }
 
     public function actionTaskAssignedPicker($id = null, $keyword)
@@ -172,10 +175,10 @@ class TaskController extends AbstractTaskController
 
     public function actionDelete($id)
     {
-        /*$this->forcePostRequest();
+        $this->forcePostRequest();
         $task = $this->getTaskById($id);
 
-        if (!$task->content->canEdit()) {
+        if (!$task->content->canEdit() or $task->isComleted()) {
             throw new HttpException(403);
         }
 
@@ -183,9 +186,7 @@ class TaskController extends AbstractTaskController
 
         return $this->asJson([
             'success' => true
-        ]);*/
-
-        return $this->htmlRedirect(['/tasks/list', 'container' => $this->contentContainer]);
+        ]);
     }
 
     /**

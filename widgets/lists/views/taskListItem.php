@@ -55,7 +55,7 @@ $checkUrl = $task->state->getCheckUrl();
 
     </span>
 
-    <?php /* if ($task->content->canEdit()) : ?>
+    <?php if ($task->content->canEdit() && !$task->isCompleted()) : ?>
         <div class="task-controls end pull-right">
             <div class="btn-group">
                 <?= Link::none()->icon('fa-ellipsis-v')
@@ -80,10 +80,8 @@ $checkUrl = $task->state->getCheckUrl();
                     </li>
                 </ul>
             </div>
-
-
         </div>
-    <?php endif; */ ?>
+    <?php endif; ?>
 
     <div class="task-controls pull-right toggleTaskDetails hidden-xs"
          style="<?= (!$task->content->canEdit()) ? 'border-right:0;margin-right:0' : '' ?>">
