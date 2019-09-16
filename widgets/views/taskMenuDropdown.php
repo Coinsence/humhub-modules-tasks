@@ -5,16 +5,13 @@
  * @license https://www.humhub.com/licences
  *
  */
-?>
-
-<?php
 
 use humhub\widgets\Button;
 use humhub\widgets\Link;
 use humhub\widgets\ModalButton;
-
 ?>
 
+<?php if(!$isCompleted) : ?>
 <div class="pull-right">
     <ul class="nav nav-pills preferences">
         <li class="dropdown">
@@ -22,6 +19,7 @@ use humhub\widgets\ModalButton;
                 <i class="fa fa-cog"></i>
                 <span class="caret"></span>
             </a>
+
             <ul class="dropdown-menu pull-right">
 
                 <li>
@@ -40,3 +38,4 @@ use humhub\widgets\ModalButton;
         </li>
     </ul>
 </div>
+<?php endif; ?>

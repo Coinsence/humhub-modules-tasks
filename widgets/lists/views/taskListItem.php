@@ -47,11 +47,15 @@ $checkUrl = $task->state->getCheckUrl();
 
         <span class="toggleTaskDetails"><?= Html::encode($task->title) ?></span>
 
+            <?php if ($task->isCompleted()) : ?>
+                <div class="label label-success"><?= '<i class="fa fa-check-square"></i> ' . Yii::t('TasksModule.views_index_index', 'Completed'); ?></div>
+            <?php endif; ?>
+
         <?= TaskBadge::widget(['task' => $task, 'includePending' => false, 'includeCompleted' => false]) ?>
 
     </span>
 
-    <?php if ($task->content->canEdit()) : ?>
+    <?php if ($task->content->canEdit() && !$task->isCompleted()) : ?>
         <div class="task-controls end pull-right">
             <div class="btn-group">
                 <?= Link::none()->icon('fa-ellipsis-v')
@@ -76,8 +80,6 @@ $checkUrl = $task->state->getCheckUrl();
                     </li>
                 </ul>
             </div>
-
-
         </div>
     <?php endif; ?>
 
