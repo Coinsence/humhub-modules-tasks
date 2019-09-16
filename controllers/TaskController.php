@@ -48,12 +48,15 @@ class TaskController extends AbstractTaskController
             $taskForm = new TaskForm(['cal' => $cal, 'taskListId' => $listId]);
             $taskForm->createNew($this->contentContainer);
         } else {
-            $taskForm = new TaskForm([
+
+            /*$taskForm = new TaskForm([
                 'task' => Task::find()->contentContainer($this->contentContainer)->where(['task.id' => $id])->one(),
                 'cal' => $cal,
                 'redirect' => $redirect,
                 'taskListId' => $listId
-            ]);
+            ]);*/
+
+            return $this->htmlRedirect(['/tasks/list', 'container' => $this->contentContainer]);
         }
 
         if (!$taskForm->task) {
@@ -169,7 +172,7 @@ class TaskController extends AbstractTaskController
 
     public function actionDelete($id)
     {
-        $this->forcePostRequest();
+        /*$this->forcePostRequest();
         $task = $this->getTaskById($id);
 
         if (!$task->content->canEdit()) {
@@ -180,7 +183,9 @@ class TaskController extends AbstractTaskController
 
         return $this->asJson([
             'success' => true
-        ]);
+        ]);*/
+
+        return $this->htmlRedirect(['/tasks/list', 'container' => $this->contentContainer]);
     }
 
     /**
