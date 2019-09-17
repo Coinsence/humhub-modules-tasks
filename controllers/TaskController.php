@@ -178,7 +178,7 @@ class TaskController extends AbstractTaskController
         $this->forcePostRequest();
         $task = $this->getTaskById($id);
 
-        if (!$task->content->canEdit() or $task->isComleted()) {
+        if (!$task->content->canEdit() or $task->isCompleted()) {
             throw new HttpException(403);
         }
 
