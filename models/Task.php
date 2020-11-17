@@ -1080,7 +1080,7 @@ class Task extends ContentActiveRecord implements Searchable
 
     // ###########  handle task related accounts  ###########
 
-    public function manageSpaceAccount()
+    public function manageTaskAccount()
     {
         $accountTitle = "Task#$this->id ( $this->title )";
         $accountUserId = empty($this->responsibleUsers) ? Yii::$app->getUser()->id : User::findOne(['guid' => $this->responsibleUsers[0]])->id;
@@ -1088,10 +1088,10 @@ class Task extends ContentActiveRecord implements Searchable
         if (null === ($taskSpaceAccount = TaskAccount::findOne(['task_id' => $this->id]))) {
 
             $spaceAccount = new Account([
-                'title' => $spaceAccountTitle,
+                'title' => $accountTitle,
                 'space_id' => $this->content->container->id,
                 'account_type' => Account::TYPE_TASK,
-                'user_id' => $spaceAccountUserId
+                'user_id' => $accountUserId
             ]);
 
             $spaceAccount->save();
