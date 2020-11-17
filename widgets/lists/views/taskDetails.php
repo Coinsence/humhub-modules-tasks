@@ -47,7 +47,7 @@ if (($task->schedule->isOverdue())) {
                 </div>
             <?php endif; ?>
 
-            <?php if (!$task->hasAccount(Task::ACCOUNT_WORKER) && $task->canChooseWorkAccount()): ?>
+            <?php if (!$task->hasAccount(Task::ACCOUNT_WORKER) && $task->canChooseWorkAccount() && $task->hasTaskAssigned()): ?>
                 <?= ChooseWorkerAccountButton::widget(['task' => $task]) ?>
             <?php else: ?>
                 <?= ChangeStatusButton::widget(['task' => $task]) ?>
