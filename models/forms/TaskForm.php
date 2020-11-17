@@ -6,6 +6,7 @@
  * @license https://www.humhub.com/licences
  *
  */
+
 /**
  * Created by PhpStorm.
  * User: davidborn
@@ -101,6 +102,11 @@ class TaskForm extends Model
     public $submitUrl;
 
     /**
+     * @var integer
+     */
+    public $has_account;
+
+    /**
      * @inheritdoc
      */
     public function init()
@@ -109,7 +115,7 @@ class TaskForm extends Model
 
         if ($this->task) {
             $this->task->scenario = Task::SCENARIO_EDIT;
-            if($this->task->all_day) {
+            if ($this->task->all_day) {
                 $this->timeZone = $this->task->time_zone;
             }
 
@@ -129,18 +135,18 @@ class TaskForm extends Model
             [['end_date'], DbDateValidator::class, 'format' => Yii::$app->params['formatter']['defaultDateFormat'], 'timeAttribute' => 'end_time', 'timeZone' => $this->timeZone],
             [['end_date'], 'validateEndTime'],
 
-            [['start_date', 'end_date'], 'required', 'when' => function($model) {
+            [['start_date', 'end_date'], 'required', 'when' => function ($model) {
                 return $model->task->scheduling == 1;
             }, 'whenClient' => "function (attribute, value) {
                 return $('#task-scheduling').val() == 1;
             }"],
-            [['start_time', 'end_time'], 'required', 'when' => function($model) {
+            [['start_time', 'end_time'], 'required', 'when' => function ($model) {
                 return $model->task->all_day == 0;
             }, 'whenClient' => "function (attribute, value) {
                 return $('#task-all_day').val() == 0;
             }"],
 
-            [['is_public'], 'integer'],
+            [['is_public', 'has_account'], 'integer'],
             [['newItems', 'editItems'], 'safe'],
         ];
     }
@@ -159,12 +165,12 @@ class TaskForm extends Model
     public function checkAllDay()
     {
         Yii::$app->formatter->timeZone = $this->timeZone;
-        
-        if($this->task->all_day) {
+
+        if ($this->task->all_day) {
             $date = new DateTime('now', new DateTimeZone($this->timeZone));
-            $date->setTime(0,0);
+            $date->setTime(0, 0);
             $this->start_time = Yii::$app->formatter->asTime($date, $this->getTimeFormat());
-            $date->setTime(23,59);
+            $date->setTime(23, 59);
             $this->end_time = Yii::$app->formatter->asTime($date, $this->getTimeFormat());
         }
         Yii::$app->i18n->autosetLocale();
@@ -191,19 +197,19 @@ class TaskForm extends Model
     {
         return array_merge(parent::attributeLabels(), [
             'start_date' => Yii::t('TasksModule.models_forms_TaskForm', 'Start Date'),
-//            'type_id' => Yii::t('TasksModule.models_forms_TaskForm', 'Event Type'),
             'end_date' => Yii::t('TasksModule.models_forms_TaskForm', 'End Date'),
             'start_time' => Yii::t('TasksModule.models_forms_TaskForm', 'Start Time'),
             'end_time' => Yii::t('TasksModule.models_forms_TaskForm', 'End Time'),
             'timeZone' => Yii::t('TasksModule.models_forms_TaskForm', 'Time Zone'),
             'is_public' => Yii::t('TasksModule.models_forms_TaskForm', 'Public'),
+            'has_account' => Yii::t('TasksModule.models_forms_TaskForm', 'Associate Account'),
         ]);
     }
 
     public function getTitle()
     {
-        if($this->task->isNewRecord) {
-           return Yii::t('TasksModule.views_index_edit', '<strong>Create</strong> new task');
+        if ($this->task->isNewRecord) {
+            return Yii::t('TasksModule.views_index_edit', '<strong>Create</strong> new task');
         }
 
         return Yii::t('TasksModule.views_index_edit', '<strong>Edit</strong> task');
@@ -233,16 +239,19 @@ class TaskForm extends Model
     public function load($data, $formName = null)
     {
         // Make sure we load the timezone beforehand so its available in validators etc..
-        if($data && isset($data[$this->formName()]) && isset($data[$this->formName()]['timeZone']) && !empty($data[$this->formName()]['timeZone'])) {
+        if ($data && isset($data[$this->formName()]) && isset($data[$this->formName()]['timeZone']) && !empty($data[$this->formName()]['timeZone'])) {
             $this->timeZone = $data[$this->formName()]['timeZone'];
         }
-        if(parent::load($data) && !empty($this->timeZone)) {
+        if (parent::load($data) && !empty($this->timeZone)) {
+            if ($this->task->isNewRecord) {
+                $this->task->has_account = $this->has_account;
+            }
             $this->task->time_zone = $this->timeZone;
         }
 
         $this->task->content->visibility = $this->is_public;
 
-        if(!$this->task->load($data)) {
+        if (!$this->task->load($data)) {
             return false;
         }
 
@@ -258,12 +267,11 @@ class TaskForm extends Model
         $this->task->setEditItems($this->editItems);
         $this->task->setNewItems($this->newItems);
 
-        if(!$this->validate()) {
+        if (!$this->validate()) {
             return false;
         }
 
-        if(!$this->task->content->canEdit())
-        {
+        if (!$this->task->content->canEdit()) {
             throw new HttpException(403);
         }
 
@@ -277,7 +285,7 @@ class TaskForm extends Model
         // We save the list ids to reload in the view this has to be called before $task->save()!
         $this->reloadListId = $this->getListIdsToReload();
 
-        if($this->task->save()) {
+        if ($this->task->save()) {
             $this->task->fileManager->attach(Yii::$app->request->post('fileList'));
             return true;
         }
@@ -293,10 +301,10 @@ class TaskForm extends Model
     private function getListIdsToReload()
     {
         $result = false;
-        if(!$this->task->isNewRecord && $this->task->isAttributeChanged('task_list_id', false)) {
+        if (!$this->task->isNewRecord && $this->task->isAttributeChanged('task_list_id', false)) {
             $result = [$this->task->task_list_id];
             $result[] = $this->task->getOldAttribute('task_list_id');
-        } else if($this->task->isNewRecord) {
+        } else if ($this->task->isNewRecord) {
             $result = [$this->task->task_list_id];
         }
         return $result;
@@ -315,7 +323,7 @@ class TaskForm extends Model
      */
     public function translateDateTimes($start = null, $end = null, $sourceTimeZone = null, $targetTimeZone = null, $dateFormat = 'php:Y-m-d H:i:s e')
     {
-        if(!$start) {
+        if (!$start) {
             return;
         }
 

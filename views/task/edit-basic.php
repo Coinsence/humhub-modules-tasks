@@ -31,6 +31,9 @@ use humhub\widgets\MarkdownField;
     <?= $form->field($taskForm->task, 'description')->widget(MarkdownField::class, ['fileModel' => $taskForm->task, 'fileAttribute' => 'files']) ?>
 
     <?= $form->field($taskForm, 'is_public')->checkbox() ?>
+    <?php if($taskForm->task->isNewRecord) : ?>
+        <?= $form->field($taskForm, 'has_account')->checkbox() ?>
+    <?php endif; ?>
     <?= $form->field($taskForm->task, 'scheduling')->checkbox(['data-action-change' => 'toggleScheduling']) ?>
 
 

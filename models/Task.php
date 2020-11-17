@@ -57,6 +57,7 @@ use humhub\modules\tasks\permissions\ManageTasks;
  * @property integer $cal_mode
  * @property integer $task_list_id
  * @property string $time_zone The timeZone this entry was saved, note the dates itself are always saved in app timeZone
+ * @property integer has_account
  *
  * @property TaskReminder[] $taskReminder
  * @property TaskItem[] $items
@@ -245,7 +246,7 @@ class Task extends ContentActiveRecord implements Searchable
             }"],
             [['start_datetime'], DbDateValidator::className()],
             [['end_datetime'], DbDateValidator::className()],
-            [['all_day', 'scheduling', 'review', 'request_sent'], 'integer'],
+            [['all_day', 'scheduling', 'review', 'request_sent', 'has_account'], 'integer'],
             [['cal_mode'], 'in', 'range' => TaskScheduling::$calModes],
             [['assignedUsers', 'description', 'responsibleUsers', 'selectedReminders'], 'safe'],
             [['title'], 'string', 'max' => 255],
@@ -427,12 +428,11 @@ class Task extends ContentActiveRecord implements Searchable
         if ($this->scenario === self::SCENARIO_EDIT) {
             $oldTaskUsers = $this->taskUsers;
 
-            if ($this->isPending())
-                TaskUser::deleteAll(['task_id' => $this->id]);
-            else
-                TaskUser::deleteAll(['task_id' => $this->id, 'user_type' => Task::USER_RESPONSIBLE]);
+            TaskUser::deleteAll(['task_id' => $this->id]);
 
-            $this->manageSpaceAccount();
+            if (true == $this->has_account) {
+                $this->manageTaskAccount();
+            }
 
             if (!empty($this->assignedUsers)) {
                 foreach ($this->assignedUsers as $guid) {
@@ -1082,8 +1082,8 @@ class Task extends ContentActiveRecord implements Searchable
 
     public function manageSpaceAccount()
     {
-        $spaceAccountTitle = "Task#$this->id ( $this->title )";
-        $spaceAccountUserId = empty($this->responsibleUsers) ? null : User::findOne(['guid' => $this->responsibleUsers[0]])->id;
+        $accountTitle = "Task#$this->id ( $this->title )";
+        $accountUserId = empty($this->responsibleUsers) ? Yii::$app->getUser()->id : User::findOne(['guid' => $this->responsibleUsers[0]])->id;
 
         if (null === ($taskSpaceAccount = TaskAccount::findOne(['task_id' => $this->id]))) {
 
