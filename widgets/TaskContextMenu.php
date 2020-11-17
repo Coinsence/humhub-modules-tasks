@@ -50,7 +50,8 @@ class TaskContextMenu extends Widget
                     'resetUrl' => TaskUrl::resetTask($this->task),
                     'canEdit' => $this->task->content->canEdit(),
                     'canRequestExtension' => ( $this->task->schedule->canRequestExtension()),
-                    'canReset' => $this->task->canResetTask()
+                    'canReset' => $this->task->canResetTask(),
+                    'isCompleted' => $this->task->isCompleted()
         ]);
     }
 

@@ -21,17 +21,18 @@ $responsible = $taskForm->task->taskResponsibleUsers;
 
 <div class="modal-body">
 
+    <?php if ($taskForm->task->isPending()) : ?>
+        <?= $form->field($taskForm->task, 'assignedUsers')->widget(UserPickerField::class, [
+            'id' => 'taskAssignedUserPicker',
+            'selection' => $taskForm->task->taskAssignedUsers,
+            'url' => $taskForm->getTaskAssignedPickerUrl(),
+            'placeholder' => Yii::t('TasksModule.views_index_edit', 'Assign users'),
+            'maxSelection' => 1,
+        ])->hint(Yii::t('TasksModule.views_index_edit', 'Leave empty to let anyone work on this task.'), []) ?>
 
-    <?= $form->field($taskForm->task, 'assignedUsers')->widget(UserPickerField::class, [
-        'id' => 'taskAssignedUserPicker',
-        'selection' => $taskForm->task->taskAssignedUsers,
-        'url' => $taskForm->getTaskAssignedPickerUrl(),
-        'placeholder' => Yii::t('TasksModule.views_index_edit', 'Assign users'),
-        'maxSelection' => 1,
-    ])->hint(Yii::t('TasksModule.views_index_edit', 'Leave empty to let anyone work on this task.'), []) ?>
-
-    <?= Link::userPickerSelfSelect('#taskAssignedUserPicker'); ?>
-
+        <?= Link::userPickerSelfSelect('#taskAssignedUserPicker'); ?>
+    <?php endif ?>
+    
     <br>
 
     <?= $form->field($taskForm->task, 'responsibleUsers')->widget(UserPickerField::class, [

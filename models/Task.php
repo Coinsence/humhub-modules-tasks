@@ -17,6 +17,7 @@ use humhub\modules\tasks\permissions\ProcessUnassignedTasks;
 use humhub\modules\user\components\ActiveQueryUser;
 use humhub\modules\xcoin\helpers\AccountHelper;
 use humhub\modules\xcoin\models\Account;
+use humhub\modules\xcoin\models\Transaction;
 use Yii;
 use yii\db\ActiveQuery;
 use yii\db\Expression;
@@ -392,12 +393,23 @@ class Task extends ContentActiveRecord implements Searchable
             $taskReminder->delete();
         }
 
-        foreach (TaskAccount::findAll(['task_id' => $this->id]) as $taskAccount) {
-            $account = Account::findOne(['id' => $taskAccount->account_id]);
-            $account->delete();
-
-            $taskAccount->delete();
+        if ($this->isCompleted()) {
+            $this->mutateTransactions();
+        } else {
+            // returning coins present in task account to their original accounts
+            $this->refund();
         }
+
+        foreach (TaskAccount::findAll(['task_id' => $this->id]) as $taskSpaceAccount) {
+            if ($taskSpaceAccount->account_type == Task::ACCOUNT_SPACE) {
+                $spaceAccount = Account::findOne(['id' => $taskSpaceAccount->account_id]);
+
+                $spaceAccount->delete();
+            }
+
+            $taskSpaceAccount->delete();
+        }
+
 
         return parent::beforeDelete();
     }
@@ -454,6 +466,8 @@ class Task extends ContentActiveRecord implements Searchable
                     $this->addTaskResponsible($guid, empty($oldResponsible));
                 }
             }
+
+            $this->deleteOldWorkerTaskAccount();
 
             $this->checklist->afterSave($insert);
             $this->schedule->afterSave($insert, $changedAttributes);
@@ -793,6 +807,12 @@ class Task extends ContentActiveRecord implements Searchable
         return $this->review && $this->isTaskResponsible($user);
     }
 
+    public function canChooseWorkAccount()
+    {
+
+        return $this->isTaskAssigned(Yii::$app->user) || $this->isTaskResponsible(Yii::$app->user);
+    }
+
     /**
      * Additional canEdit check for responsible users.
      * @return bool
@@ -1058,38 +1078,145 @@ class Task extends ContentActiveRecord implements Searchable
         }
     }
 
-    // ###########  handle task related account  ###########
+    // ###########  handle task related accounts  ###########
 
-    public function manageTaskAccount()
+    public function manageSpaceAccount()
     {
         $accountTitle = "Task#$this->id ( $this->title )";
         $accountUserId = empty($this->responsibleUsers) ? Yii::$app->getUser()->id : User::findOne(['guid' => $this->responsibleUsers[0]])->id;
 
-        if (null === ($taskAccount = TaskAccount::findOne(['task_id' => $this->id]))) {
+        if (null === ($taskSpaceAccount = TaskAccount::findOne(['task_id' => $this->id]))) {
 
-            $account = new Account([
-                'title' => $accountTitle,
+            $spaceAccount = new Account([
+                'title' => $spaceAccountTitle,
                 'space_id' => $this->content->container->id,
                 'account_type' => Account::TYPE_TASK,
-                'user_id' => $accountUserId
+                'user_id' => $spaceAccountUserId
             ]);
 
-            $account->save();
+            $spaceAccount->save();
 
-            $taskAccount = new TaskAccount([
+            $taskSpaceAccount = new TaskAccount([
                 'task_id' => $this->id,
-                'account_id' => $account->id,
+                'account_id' => $spaceAccount->id,
                 'account_type' => self::ACCOUNT_SPACE,
             ]);
 
-            return $taskAccount->save();
+            return $taskSpaceAccount->save();
         } else {
-            $account = Account::findOne(['id' => $taskAccount->account_id]);
+            $spaceAccount = Account::findOne(['id' => $taskSpaceAccount->account_id]);
 
-            $account->title = $accountTitle;
-            $account->user_id = $accountUserId;
+            $spaceAccount->title = $spaceAccountTitle;
+            $spaceAccount->user_id = $spaceAccountUserId;
 
-            return $account->save();
+            return $spaceAccount->save();
         }
+    }
+
+    public function getTaskAccounts()
+    {
+        return $this->hasMany(TaskAccount::class, ['task_id' => 'id']);
+    }
+
+    public function getTaskAccount($accountType)
+    {
+        return $this->getTaskAccounts()->filterWhere(['account_type' => $accountType])->one();
+    }
+
+    public function getAccount($accountType)
+    {
+        return $this
+            ->hasOne(Account::class, ['id' => 'account_id'])
+            ->via('taskAccounts', function ($query) use ($accountType) {
+                $query->andWhere(['account_type' => $accountType]);
+            })
+            ->one();
+    }
+
+    public function hasAccount($accountType)
+    {
+        return is_null($this->getAccount($accountType)) ? false : true;
+    }
+
+    private function deleteOldWorkerTaskAccount()
+    {
+        if (
+            $this->hasAccount(Task::ACCOUNT_WORKER) &&
+            $this->assignedUsers[0] != $this->getWorker() &&
+            $this->isPending()
+        ) {
+            $this->getTaskAccount(Task::ACCOUNT_WORKER)->delete();
+        }
+    }
+
+    private function getWorker()
+    {
+        return User::findOne(['id' => $this->getAccount(Task::ACCOUNT_WORKER)->user_id])->guid;
+    }
+
+    /**
+     * revert all transactions where task space account is the target account
+     */
+    public function refund()
+    {
+        $incomeTransactions = Transaction::findAll(['to_account_id' => $this->getAccount(Task::ACCOUNT_SPACE)->id]);
+
+        foreach ($incomeTransactions as $transaction) {
+            $transaction->delete();
+        }
+    }
+
+
+    /**
+     * Transfer coins from task space account to worker target account
+     */
+    public function payWorker()
+    {
+        $fromAccount = $this->getAccount(Task::ACCOUNT_SPACE);
+        $toAccount = $this->getAccount(Task::ACCOUNT_WORKER);
+
+        foreach ($fromAccount->getAssets() as $asset) {
+            $incomeTransactions = Transaction::findAll([
+                'asset_id' => $asset->id,
+                'to_account_id' => $fromAccount->id
+            ]);
+
+            foreach ($incomeTransactions as $transaction) {
+                $outcomeTransaction = new Transaction();
+                $outcomeTransaction->transaction_type = Transaction::TRANSACTION_TYPE_TASK_PAYMENT;
+                $outcomeTransaction->from_account_id = $fromAccount->id;
+                $outcomeTransaction->to_account_id = $toAccount->id;
+                $outcomeTransaction->asset_id = $asset->id;
+                $outcomeTransaction->amount = $transaction->amount;
+                $outcomeTransaction->comment = "Payment for <<{$this->title}>> task";
+
+                $outcomeTransaction->save();
+            }
+        }
+    }
+
+    /**
+     * detach all associated transactions from space task account an link them to default one
+     */
+    public function mutateTransactions()
+    {
+        $defaultSpaceAccount = Account::findOne([
+            'space_id' => $this->content->container->id,
+            'account_type' => Account::TYPE_DEFAULT
+        ]);
+
+        $taskSpaceAccount = $this->getAccount(Task::ACCOUNT_SPACE);
+
+        // update income transactions
+        Transaction::updateAll(
+            ['to_account_id' => $defaultSpaceAccount->id],
+            ['to_account_id' => $taskSpaceAccount->id]
+        );
+
+        // update outcome transactions
+        Transaction::updateAll(
+            ['from_account_id' => $defaultSpaceAccount->id],
+            ['from_account_id' => $taskSpaceAccount->id]
+        );
     }
 }

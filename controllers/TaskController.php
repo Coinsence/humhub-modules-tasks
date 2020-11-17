@@ -3,6 +3,7 @@
 namespace humhub\modules\tasks\controllers;
 
 use humhub\modules\tasks\helpers\TaskUrl;
+use humhub\modules\tasks\models\account\TaskAccount;
 use Yii;
 use yii\web\HttpException;
 use humhub\modules\content\components\ContentContainerControllerAccess;
@@ -39,32 +40,38 @@ class TaskController extends AbstractTaskController
     {
         $isNewTask = empty($id);
 
-        if($isNewTask && !$this->contentContainer->can([CreateTask::class, ManageTasks::class])) {
+        if ($isNewTask && !$this->contentContainer->can([CreateTask::class, ManageTasks::class])) {
             throw new HttpException(403);
         }
 
         if ($isNewTask) {
-            $taskForm = new TaskForm(['cal' => $cal, 'taskListId' =>  $listId]);
+            $taskForm = new TaskForm(['cal' => $cal, 'taskListId' => $listId]);
             $taskForm->createNew($this->contentContainer);
         } else {
+            $task = Task::find()->contentContainer($this->contentContainer)->where(['task.id' => $id])->one();
+
+            if ($task->isCompleted()) {
+                throw new HttpException(403);
+            }
+
             $taskForm = new TaskForm([
-                'task' => Task::find()->contentContainer($this->contentContainer)->where(['task.id' => $id])->one(),
+                'task' => $task,
                 'cal' => $cal,
                 'redirect' => $redirect,
                 'taskListId' => $listId
             ]);
         }
 
-        if(!$taskForm->task) {
+        if (!$taskForm->task) {
             throw new HttpException(404);
-        } else if(!$taskForm->task->content->canEdit()) {
+        } else if (!$taskForm->task->content->canEdit()) {
             throw new HttpException(403);
         }
 
         if ($taskForm->load(Yii::$app->request->post()) && $taskForm->save()) {
-            if($cal) {
+            if ($cal) {
                 return ModalClose::widget(['saved' => true]);
-            } else if($redirect) {
+            } else if ($redirect) {
                 return $this->htmlRedirect(TaskUrl::viewTask($taskForm->task));
             }
 
@@ -84,8 +91,12 @@ class TaskController extends AbstractTaskController
         $this->forcePostRequest();
         $task = $this->getTaskById($id);
 
-        if(!$task->state->canProceed($status)) {
+        if (!$task->state->canProceed($status)) {
             throw new HttpException(403);
+        }
+
+        if (Task::STATUS_COMPLETED == $status) {
+            $task->payWorker();
         }
 
         return $this->asJson(['success' => $task->state->proceed($status)]);
@@ -93,14 +104,18 @@ class TaskController extends AbstractTaskController
 
     public function actionRevert($id, $status)
     {
-        $this->forcePostRequest();
+        /*$this->forcePostRequest();
         $task = $this->getTaskById($id);
 
         if(!$task->state->canRevert($status)) {
             throw new HttpException(403);
         }
 
-        return $this->asJson(['success' => $task->state->revert($status)]);
+        $task->refund();
+
+        return $this->asJson(['success' => $task->state->revert($status)]);*/
+
+        throw new HttpException(403);
     }
 
     public function actionTaskAssignedPicker($id = null, $keyword)
@@ -129,11 +144,11 @@ class TaskController extends AbstractTaskController
     {
         $task = Task::find()->contentContainer($this->contentContainer)->where(['task.id' => $id])->one();
 
-        if(!$task) {
+        if (!$task) {
             throw new HttpException(404);
         }
 
-        if(!$task->content->canView()) {
+        if (!$task->content->canView()) {
             throw new HttpException(403);
         }
 
@@ -147,7 +162,7 @@ class TaskController extends AbstractTaskController
     {
         $task = $this->getTaskById($id);
 
-        if(!$task->content->canView()) {
+        if (!$task->content->canView()) {
             throw new HttpException(403);
         }
 
@@ -163,7 +178,7 @@ class TaskController extends AbstractTaskController
         $this->forcePostRequest();
         $task = $this->getTaskById($id);
 
-        if(!$task->content->canEdit()) {
+        if (!$task->content->canEdit() or $task->isCompleted()) {
             throw new HttpException(403);
         }
 
@@ -184,7 +199,7 @@ class TaskController extends AbstractTaskController
     {
         $task = $this->getTaskById($id);
 
-        if( !$task->content->canView() && !$task->schedule->canRequestExtension() ) {
+        if (!$task->content->canView() && !$task->schedule->canRequestExtension()) {
             throw new HttpException(401, Yii::t('TasksModule.controller', 'You have insufficient permissions to perform that operation!'));
         }
 
@@ -217,5 +232,20 @@ class TaskController extends AbstractTaskController
         }
 
         return $this->asJson(['success' => false]);
+    }
+
+    public function actionChooseWorkerAccount($id, $accountId)
+    {
+        $this->forcePostRequest();
+
+        $taskSpaceAccount = new TaskAccount([
+            'task_id' => $id,
+            'account_id' => $accountId,
+            'account_type' => Task::ACCOUNT_WORKER,
+        ]);
+
+        $taskSpaceAccount->save();
+
+        return $this->asJson(['success' => true]);
     }
 }
