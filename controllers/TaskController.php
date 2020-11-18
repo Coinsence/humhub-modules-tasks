@@ -96,7 +96,9 @@ class TaskController extends AbstractTaskController
         }
 
         if (Task::STATUS_COMPLETED == $status) {
-            $task->payWorker();
+            if ($task->has_account) {
+                $task->payWorker();
+            }
         }
 
         return $this->asJson(['success' => $task->state->proceed($status)]);

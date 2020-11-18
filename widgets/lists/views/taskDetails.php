@@ -1,6 +1,6 @@
 <?php
-/* @var $this \humhub\components\View */
 
+use humhub\components\View;
 use humhub\modules\content\widgets\richtext\RichText;
 use humhub\modules\content\widgets\WallEntryAddons;
 use humhub\modules\tasks\helpers\TaskUrl;
@@ -13,7 +13,8 @@ use humhub\modules\tasks\widgets\checklist\TaskChecklist;
 use humhub\modules\tasks\widgets\TaskRoleInfoBox;
 use humhub\widgets\Button;
 
-/* @var $task \humhub\modules\tasks\models\Task */
+/* @var $this View */
+/* @var $task Task */
 
 $scheduleTextClass = '';
 
@@ -47,7 +48,7 @@ if (($task->schedule->isOverdue())) {
                 </div>
             <?php endif; ?>
 
-            <?php if (!$task->hasAccount(Task::ACCOUNT_WORKER) && $task->canChooseWorkAccount() && $task->hasTaskAssigned()): ?>
+            <?php if ($task->has_account && !$task->hasAccount(Task::ACCOUNT_WORKER) && $task->canChooseWorkAccount() && $task->hasTaskAssigned()): ?>
                 <?= ChooseWorkerAccountButton::widget(['task' => $task]) ?>
             <?php else: ?>
                 <?= ChangeStatusButton::widget(['task' => $task]) ?>
