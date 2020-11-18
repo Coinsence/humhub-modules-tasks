@@ -95,6 +95,12 @@ class TaskController extends AbstractTaskController
             throw new HttpException(403);
         }
 
+        if (Task::STATUS_IN_PROGRESS == $status) {
+            if (!$task->hasTaskAssigned()) {
+                $task->addTaskAssigned(Yii::$app->user->getGuid());
+            }
+        }
+
         if (Task::STATUS_COMPLETED == $status) {
             if ($task->has_account) {
                 $task->payWorker();
