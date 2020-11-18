@@ -1106,8 +1106,8 @@ class Task extends ContentActiveRecord implements Searchable
         } else {
             $spaceAccount = Account::findOne(['id' => $taskSpaceAccount->account_id]);
 
-            $spaceAccount->title = $spaceAccountTitle;
-            $spaceAccount->user_id = $spaceAccountUserId;
+            $spaceAccount->title = $accountTitle;
+            $spaceAccount->user_id = $accountUserId;
 
             return $spaceAccount->save();
         }

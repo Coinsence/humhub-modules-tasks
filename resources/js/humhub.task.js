@@ -199,6 +199,19 @@ humhub.module('task', function (module, require, $) {
         });
     };
 
+    var createTaskAccount = function (evt) {
+        client.post(evt).then(function (response) {
+            if (response.success) {
+                client.reload();
+            } else {
+                module.log.error(e, true);
+            }
+        }).catch(function (e) {
+            module.log.error(e, true);
+            evt.finish();
+        });
+    };
+
     var init = function () {
         $(document).on('click', '.task-change-state-button a', function () {
             loader.initLoaderButton($('.task-change-state-button').children().first()[0]);
@@ -211,7 +224,8 @@ humhub.module('task', function (module, require, $) {
         deleteTask: deleteTask,
         changeState: changeState,
         extensionrequest: extensionrequest,
-        chooseWorkerAccount: chooseWorkerAccount
+        chooseWorkerAccount: chooseWorkerAccount,
+        createTaskAccount: createTaskAccount
     });
 })
 ;

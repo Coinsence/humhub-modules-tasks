@@ -256,4 +256,20 @@ class TaskController extends AbstractTaskController
 
         return $this->asJson(['success' => true]);
     }
+
+    public function actionCreateTaskAccount($id)
+    {
+        $this->forcePostRequest();
+
+        if(!$task = Task::findOne(['id' => $id])){
+            throw new HttpException(404, 'Task not found');
+        }
+
+        $task->scenario = Task::SCENARIO_EDIT;
+        $task->has_account = 1;
+
+        $task->save();
+
+        return $this->asJson(['success' => true]);
+    }
 }
