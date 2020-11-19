@@ -17,6 +17,9 @@ use Yii;
 
 class AllocateCoinsButton extends Widget
 {
+    const ACTION_CREATE_ACCOUNT = 1;
+    const ACTION_ALLOCATE_COINS = 2;
+
     /**
      * @var Task
      */
@@ -28,7 +31,6 @@ class AllocateCoinsButton extends Widget
     public function run()
     {
         $state = $this->task->state;
-
         // disable allocate coins action if task is completed
         if ($state instanceof CompletedState) {
             return '';
@@ -37,13 +39,15 @@ class AllocateCoinsButton extends Widget
         if ($this->task->has_account) {
             $actionLabel = 'Allocate Coins';
             $icon = 'fa-money';
-            $url = TaskUrl::createTaskAccount($this->task);
-            $handler = 'task.allocateCoins';
+            $url = TaskUrl::allocateCoins($this->task);
+            $handler = '';
+            $action = self::ACTION_ALLOCATE_COINS;
         } else {
             $actionLabel = 'Create Account';
             $icon = 'fa-plus';
             $url = TaskUrl::createTaskAccount($this->task);
             $handler = 'task.createTaskAccount';
+            $action = self::ACTION_CREATE_ACCOUNT;
         }
 
         return $this->render('AllocateCoinsButton', [
@@ -52,6 +56,7 @@ class AllocateCoinsButton extends Widget
             'icon' => $icon,
             'url' => $url,
             'handler' => $handler,
+            'action' => $action
         ]);
     }
 }

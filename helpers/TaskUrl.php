@@ -43,6 +43,7 @@ class TaskUrl extends Url
 
     const ROUTE_CHOOSE_WORKER_ACCOUNT = '/tasks/task/choose-worker-account';
     const ROUTE_CREATE_TASK_ACCOUNT = '/tasks/task/create-task-account';
+    const ROUTE_ALLOCATE_COINS = '/tasks/task/allocate-coins';
 
     public static function toConfig()
     {
@@ -137,6 +138,11 @@ class TaskUrl extends Url
     public static function createTaskAccount(Task $task)
     {
         return static::container($task)->createUrl(static::ROUTE_CREATE_TASK_ACCOUNT, ['id' => $task->id]);
+    }
+
+    public static function allocateCoins(Task $task)
+    {
+        return static::container($task)->createUrl(static::ROUTE_ALLOCATE_COINS, ['id' => $task->id]);
     }
 
     /**
