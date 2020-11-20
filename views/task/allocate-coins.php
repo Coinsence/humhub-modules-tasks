@@ -34,7 +34,7 @@ Select2BootstrapAsset::register($this);
 
     <div class="row">
         <div class="col-md-6">
-            <?= $form->field($model, 'amount')->input('number', ['min' => 1]) ?>
+            <?= $form->field($model, 'amount')->input('number', ['min' => 0.1, 'step' => 0.1]) ?>
         </div>
         <div class="col-md-6">
             <?=

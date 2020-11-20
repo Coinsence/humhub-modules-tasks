@@ -1173,7 +1173,10 @@ class Task extends ContentActiveRecord implements Searchable
     public function payWorker()
     {
         $fromAccount = $this->getAccount(Task::ACCOUNT_SPACE);
-        $toAccount = $this->getAccount(Task::ACCOUNT_WORKER);
+
+        if (!$toAccount = $this->getAccount(Task::ACCOUNT_WORKER)) {
+            return;
+        }
 
         foreach ($fromAccount->getAssets() as $asset) {
             $incomeTransactions = Transaction::findAll([

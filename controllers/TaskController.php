@@ -310,7 +310,6 @@ class TaskController extends AbstractTaskController
         $model->fromAccount = $fromAccount;
         $model->toAccount = $toAccount;
         $model->task = $task;
-        $model->amount = 1;
 
         $assets = [];
         foreach ($fromAccount->getAssets() as $asset) {

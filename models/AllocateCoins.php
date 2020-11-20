@@ -54,7 +54,7 @@ class AllocateCoins extends Model
     {
         return [
             [['amount', 'asset_id'], 'required'],
-            ['amount', 'number', 'min' => 1],
+            ['amount', 'number', 'min' => 0.1],
         ];
     }
 
