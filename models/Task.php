@@ -425,14 +425,14 @@ class Task extends ContentActiveRecord implements Searchable
     {
         parent::afterSave($insert, $changedAttributes);
 
+        if (true == $this->has_account) {
+            $this->manageTaskAccount();
+        }
+
         if ($this->scenario === self::SCENARIO_EDIT) {
             $oldTaskUsers = $this->taskUsers;
 
             TaskUser::deleteAll(['task_id' => $this->id]);
-
-            if (true == $this->has_account) {
-                $this->manageTaskAccount();
-            }
 
             if (!empty($this->assignedUsers)) {
                 foreach ($this->assignedUsers as $guid) {

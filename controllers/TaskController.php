@@ -275,8 +275,6 @@ class TaskController extends AbstractTaskController
         /** @var Task|null $task */
         $task = $this->getTaskById($id);
 
-
-        $task->scenario = Task::SCENARIO_EDIT;
         $task->has_account = 1;
 
         $task->save();
