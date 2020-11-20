@@ -5,8 +5,8 @@ use humhub\modules\content\widgets\richtext\RichText;
 use humhub\modules\content\widgets\WallEntryAddons;
 use humhub\modules\tasks\helpers\TaskUrl;
 use humhub\modules\tasks\models\Task;
+use humhub\modules\tasks\widgets\AllocateCoinsButton;
 use humhub\modules\tasks\widgets\ChangeStatusButton;
-use humhub\modules\tasks\widgets\ChooseWorkerAccountButton;
 use humhub\modules\tasks\widgets\PaymentAccountBox;
 use humhub\modules\tasks\widgets\TaskInfoBox;
 use humhub\modules\tasks\widgets\checklist\TaskChecklist;
@@ -48,21 +48,18 @@ if (($task->schedule->isOverdue())) {
                 </div>
             <?php endif; ?>
 
-            <?php if ($task->has_account && !$task->hasAccount(Task::ACCOUNT_WORKER) && $task->canChooseWorkAccount() && $task->hasTaskAssigned()): ?>
-                <?= ChooseWorkerAccountButton::widget(['task' => $task]) ?>
-            <?php else: ?>
-                <?= ChangeStatusButton::widget(['task' => $task]) ?>
-            <?php endif; ?>
+            <?= ChangeStatusButton::widget(['task' => $task]) ?>
+            <?= AllocateCoinsButton::widget(['task' => $task]) ?>
 
         </div>
 
-        <?php if(!empty($task->description)) : ?>
+        <?php if (!empty($task->description)) : ?>
             <div class="task-details-body">
-                <?= RichText::output($task->description)?>
+                <?= RichText::output($task->description) ?>
             </div>
         <?php endif; ?>
 
-        <?php if($task->hasItems()) : ?>
+        <?php if ($task->hasItems()) : ?>
             <div class="task-details-body">
                 <?= TaskChecklist::widget(['task' => $task]) ?>
             </div>

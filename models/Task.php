@@ -1106,8 +1106,8 @@ class Task extends ContentActiveRecord implements Searchable
         } else {
             $spaceAccount = Account::findOne(['id' => $taskSpaceAccount->account_id]);
 
-            $spaceAccount->title = $spaceAccountTitle;
-            $spaceAccount->user_id = $spaceAccountUserId;
+            $spaceAccount->title = $accountTitle;
+            $spaceAccount->user_id = $accountUserId;
 
             return $spaceAccount->save();
         }
@@ -1173,7 +1173,10 @@ class Task extends ContentActiveRecord implements Searchable
     public function payWorker()
     {
         $fromAccount = $this->getAccount(Task::ACCOUNT_SPACE);
-        $toAccount = $this->getAccount(Task::ACCOUNT_WORKER);
+
+        if (!$toAccount = $this->getAccount(Task::ACCOUNT_WORKER)) {
+            return;
+        }
 
         foreach ($fromAccount->getAssets() as $asset) {
             $incomeTransactions = Transaction::findAll([
