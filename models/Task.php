@@ -1175,7 +1175,13 @@ class Task extends ContentActiveRecord implements Searchable
         $fromAccount = $this->getAccount(Task::ACCOUNT_SPACE);
 
         if (!$toAccount = $this->getAccount(Task::ACCOUNT_WORKER)) {
-            return;
+            if (!$toAccount = Account::findOne([
+                'user_id' => $this->taskAssignedUsers[0]->id,
+                'account_type' => Account::TYPE_DEFAULT,
+                'space_id' => null
+            ])) {
+                return;
+            };
         }
 
         foreach ($fromAccount->getAssets() as $asset) {
