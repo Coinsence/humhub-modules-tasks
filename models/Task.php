@@ -404,7 +404,8 @@ class Task extends ContentActiveRecord implements Searchable
             if ($taskSpaceAccount->account_type == Task::ACCOUNT_SPACE) {
                 $spaceAccount = Account::findOne(['id' => $taskSpaceAccount->account_id]);
 
-                $spaceAccount->delete();
+                $spaceAccount->archived = Account::ACCOUNT_ARCHIVED;
+                $spaceAccount->save();
             }
 
             $taskSpaceAccount->delete();
@@ -1162,7 +1163,15 @@ class Task extends ContentActiveRecord implements Searchable
         $incomeTransactions = Transaction::findAll(['to_account_id' => $this->getAccount(Task::ACCOUNT_SPACE)->id]);
 
         foreach ($incomeTransactions as $transaction) {
-            $transaction->delete();
+            $refundTransaction = new Transaction();
+            $refundTransaction->transaction_type = Transaction::TRANSACTION_TYPE_TASK_PAYMENT;
+            $refundTransaction->from_account_id = $transaction->to_account_id;
+            $refundTransaction->to_account_id = $transaction->from_account_id;
+            $refundTransaction->asset_id = $transaction->asset_id;
+            $refundTransaction->amount = $transaction->amount;
+            $refundTransaction->comment = "Refund for <<{$this->title}>> task";
+
+            $refundTransaction->save();
         }
     }
 
@@ -1173,6 +1182,8 @@ class Task extends ContentActiveRecord implements Searchable
     public function payWorker()
     {
         $fromAccount = $this->getAccount(Task::ACCOUNT_SPACE);
+        $fromAccount->archived = Account::ACCOUNT_ARCHIVED;
+        $fromAccount->save();
 
         if (!$toAccount = $this->getAccount(Task::ACCOUNT_WORKER)) {
             if (!$toAccount = Account::findOne([
