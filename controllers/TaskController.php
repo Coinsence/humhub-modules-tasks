@@ -2,9 +2,14 @@
 
 namespace humhub\modules\tasks\controllers;
 
+use humhub\modules\space\widgets\Image;
 use humhub\modules\tasks\helpers\TaskUrl;
 use humhub\modules\tasks\models\account\TaskAccount;
+use humhub\modules\tasks\models\AllocateCoins;
+use humhub\modules\xcoin\models\Account;
+use Throwable;
 use Yii;
+use yii\base\Exception;
 use yii\web\HttpException;
 use humhub\modules\content\components\ContentContainerControllerAccess;
 use humhub\modules\space\models\Space;
@@ -16,6 +21,7 @@ use humhub\modules\tasks\permissions\ManageTasks;
 use humhub\modules\user\models\UserPicker;
 use humhub\widgets\ModalClose;
 use humhub\modules\tasks\models\Task;
+use yii\web\Response;
 
 class TaskController extends AbstractTaskController
 {
@@ -95,8 +101,16 @@ class TaskController extends AbstractTaskController
             throw new HttpException(403);
         }
 
+        if (Task::STATUS_IN_PROGRESS == $status) {
+            if (!$task->hasTaskAssigned()) {
+                $task->addTaskAssigned(Yii::$app->user->getGuid());
+            }
+        }
+
         if (Task::STATUS_COMPLETED == $status) {
-            $task->payWorker();
+            if ($task->has_account) {
+                $task->payWorker();
+            }
         }
 
         return $this->asJson(['success' => $task->state->proceed($status)]);
@@ -193,7 +207,7 @@ class TaskController extends AbstractTaskController
      * @param $id
      * @return string
      * @throws HttpException
-     * @throws \yii\base\Exception
+     * @throws Exception
      */
     public function actionExtend($id)
     {
@@ -247,5 +261,68 @@ class TaskController extends AbstractTaskController
         $taskSpaceAccount->save();
 
         return $this->asJson(['success' => true]);
+    }
+
+    /**
+     * @param $id
+     * @return Response
+     * @throws HttpException
+     */
+    public function actionCreateTaskAccount($id)
+    {
+        $this->forcePostRequest();
+
+        /** @var Task|null $task */
+        $task = $this->getTaskById($id);
+
+        $task->has_account = 1;
+
+        $task->save();
+
+        return $this->asJson(['success' => true]);
+    }
+
+    /**
+     * @param $id
+     * @return string
+     * @throws HttpException
+     * @throws Throwable
+     */
+    public function actionAllocateCoins($id)
+    {
+        /** @var Task|null $task */
+        $task = $this->getTaskById($id);
+
+        $fromAccount = Account::findOne(['id' => Yii::$app->request->get('accountId')]);
+        if ($fromAccount === null) {
+            return $this->renderAjax('@xcoin/views/transaction/select-account', [
+                'contentContainer' => Yii::$app->user->getIdentity(),
+                'requireAsset' => null,
+                'nextRoute' => ['/tasks/task/allocate-coins', 'id' => $task->id, 'container' => $this->contentContainer],
+            ]);
+        }
+
+        $toAccount = $task->getAccount(Task::ACCOUNT_SPACE);
+
+        $model = new AllocateCoins();
+        $model->fromAccount = $fromAccount;
+        $model->toAccount = $toAccount;
+        $model->task = $task;
+
+        $assets = [];
+        foreach ($fromAccount->getAssets() as $asset) {
+            $assets[$asset->id] = Image::widget(['space' => $asset->space, 'width' => 16, 'showTooltip' => true, 'link' => true]) . ' ' . $asset->space->name;
+        }
+
+        if ($model->load(Yii::$app->request->post()) && $model->allocateCoins()) {
+            return $this->htmlRedirect(['/xcoin/account', 'id' => $toAccount->id, 'container' => $this->contentContainer]);
+        }
+
+        return $this->renderAjax('allocate-coins', [
+            'task' => $task,
+            'model' => $model,
+            'fromAccount' => $fromAccount,
+            'assets' => $assets
+        ]);
     }
 }

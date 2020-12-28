@@ -57,6 +57,7 @@ use humhub\modules\tasks\permissions\ManageTasks;
  * @property integer $cal_mode
  * @property integer $task_list_id
  * @property string $time_zone The timeZone this entry was saved, note the dates itself are always saved in app timeZone
+ * @property integer has_account
  *
  * @property TaskReminder[] $taskReminder
  * @property TaskItem[] $items
@@ -245,7 +246,7 @@ class Task extends ContentActiveRecord implements Searchable
             }"],
             [['start_datetime'], DbDateValidator::className()],
             [['end_datetime'], DbDateValidator::className()],
-            [['all_day', 'scheduling', 'review', 'request_sent'], 'integer'],
+            [['all_day', 'scheduling', 'review', 'request_sent', 'has_account'], 'integer'],
             [['cal_mode'], 'in', 'range' => TaskScheduling::$calModes],
             [['assignedUsers', 'description', 'responsibleUsers', 'selectedReminders'], 'safe'],
             [['title'], 'string', 'max' => 255],
@@ -403,7 +404,8 @@ class Task extends ContentActiveRecord implements Searchable
             if ($taskSpaceAccount->account_type == Task::ACCOUNT_SPACE) {
                 $spaceAccount = Account::findOne(['id' => $taskSpaceAccount->account_id]);
 
-                $spaceAccount->delete();
+                $spaceAccount->archived = Account::ACCOUNT_ARCHIVED;
+                $spaceAccount->save();
             }
 
             $taskSpaceAccount->delete();
@@ -424,15 +426,14 @@ class Task extends ContentActiveRecord implements Searchable
     {
         parent::afterSave($insert, $changedAttributes);
 
+        if (true == $this->has_account) {
+            $this->manageTaskAccount();
+        }
+
         if ($this->scenario === self::SCENARIO_EDIT) {
             $oldTaskUsers = $this->taskUsers;
 
-            if ($this->isPending())
-                TaskUser::deleteAll(['task_id' => $this->id]);
-            else
-                TaskUser::deleteAll(['task_id' => $this->id, 'user_type' => Task::USER_RESPONSIBLE]);
-
-            $this->manageSpaceAccount();
+            TaskUser::deleteAll(['task_id' => $this->id]);
 
             if (!empty($this->assignedUsers)) {
                 foreach ($this->assignedUsers as $guid) {
@@ -1080,18 +1081,18 @@ class Task extends ContentActiveRecord implements Searchable
 
     // ###########  handle task related accounts  ###########
 
-    public function manageSpaceAccount()
+    public function manageTaskAccount()
     {
-        $spaceAccountTitle = "Task#$this->id ( $this->title )";
-        $spaceAccountUserId = empty($this->responsibleUsers) ? null : User::findOne(['guid' => $this->responsibleUsers[0]])->id;
+        $accountTitle = "Task#$this->id ( $this->title )";
+        $accountUserId = empty($this->responsibleUsers) ? Yii::$app->getUser()->id : User::findOne(['guid' => $this->responsibleUsers[0]])->id;
 
         if (null === ($taskSpaceAccount = TaskAccount::findOne(['task_id' => $this->id]))) {
 
             $spaceAccount = new Account([
-                'title' => $spaceAccountTitle,
+                'title' => $accountTitle,
                 'space_id' => $this->content->container->id,
                 'account_type' => Account::TYPE_TASK,
-                'user_id' => $spaceAccountUserId
+                'user_id' => $accountUserId
             ]);
 
             $spaceAccount->save();
@@ -1106,8 +1107,8 @@ class Task extends ContentActiveRecord implements Searchable
         } else {
             $spaceAccount = Account::findOne(['id' => $taskSpaceAccount->account_id]);
 
-            $spaceAccount->title = $spaceAccountTitle;
-            $spaceAccount->user_id = $spaceAccountUserId;
+            $spaceAccount->title = $accountTitle;
+            $spaceAccount->user_id = $accountUserId;
 
             return $spaceAccount->save();
         }
@@ -1162,7 +1163,15 @@ class Task extends ContentActiveRecord implements Searchable
         $incomeTransactions = Transaction::findAll(['to_account_id' => $this->getAccount(Task::ACCOUNT_SPACE)->id]);
 
         foreach ($incomeTransactions as $transaction) {
-            $transaction->delete();
+            $refundTransaction = new Transaction();
+            $refundTransaction->transaction_type = Transaction::TRANSACTION_TYPE_TASK_PAYMENT;
+            $refundTransaction->from_account_id = $transaction->to_account_id;
+            $refundTransaction->to_account_id = $transaction->from_account_id;
+            $refundTransaction->asset_id = $transaction->asset_id;
+            $refundTransaction->amount = $transaction->amount;
+            $refundTransaction->comment = "Refund for <<{$this->title}>> task";
+
+            $refundTransaction->save();
         }
     }
 
@@ -1173,7 +1182,18 @@ class Task extends ContentActiveRecord implements Searchable
     public function payWorker()
     {
         $fromAccount = $this->getAccount(Task::ACCOUNT_SPACE);
-        $toAccount = $this->getAccount(Task::ACCOUNT_WORKER);
+        $fromAccount->archived = Account::ACCOUNT_ARCHIVED;
+        $fromAccount->save();
+
+        if (!$toAccount = $this->getAccount(Task::ACCOUNT_WORKER)) {
+            if (!$toAccount = Account::findOne([
+                'user_id' => $this->taskAssignedUsers[0]->id,
+                'account_type' => Account::TYPE_DEFAULT,
+                'space_id' => null
+            ])) {
+                return;
+            };
+        }
 
         foreach ($fromAccount->getAssets() as $asset) {
             $incomeTransactions = Transaction::findAll([
