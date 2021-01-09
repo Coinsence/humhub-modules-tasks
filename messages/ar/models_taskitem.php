@@ -1,6 +1,6 @@
 <?php
 
 return [
-    'Completed' => '',
-    'Title' => '',
+    'Completed' => 'منجز',
+    'Title' => 'العنوان',
 ];

@@ -1,5 +1,5 @@
 <?php
 
 return [
-    'Drag list' => '',
+    'Drag list' => 'اسحب القائمة',
 ];
