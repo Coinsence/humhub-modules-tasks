@@ -1,5 +1,5 @@
 <?php
 
 return [
-    'Task Users have been notified' => '',
+    'Task Users have been notified' => 'تم إبلاغ مستخدمي المهمة',
 ];
