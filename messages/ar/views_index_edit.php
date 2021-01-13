@@ -1,9 +1,9 @@
 <?php
 
 return [
-    '<strong>Confirm</strong> task deletion' => 'حذف المهمة <strong>تأكيد</strong>',
-    '<strong>Create</strong> new task' => 'مهمة جديدة <strong>إنشاء</strong>',
-    '<strong>Edit</strong> task' => 'مهمة <strong>تحرير</strong>',
+    '<strong>Confirm</strong> task deletion' => 'تأكيد حذف المهمة',
+    '<strong>Create</strong> new task' => 'إنشاء مهمة جديدة',
+    '<strong>Edit</strong> task' => 'تحرير مهمة',
     'Add checkpoint...' => 'إضافة مراجعة',
     'Add reminder' => 'إضافة تذكير',
     'Add responsible users' => 'إضافة مستخدمين مسؤولين',
