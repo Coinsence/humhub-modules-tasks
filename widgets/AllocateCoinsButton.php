@@ -37,13 +37,13 @@ class AllocateCoinsButton extends Widget
         }
 
         if ($this->task->has_account) {
-            $actionLabel = 'Allocate Coins';
+            $actionLabel = Yii::t('TasksModule.base', 'Allocate Coins');
             $icon = 'fa-money';
             $url = TaskUrl::allocateCoins($this->task);
             $handler = '';
             $action = self::ACTION_ALLOCATE_COINS;
         } else {
-            $actionLabel = 'Create Account';
+            $actionLabel = Yii::t('TasksModule.base', 'Create Account');
             $icon = 'fa-plus';
             $url = TaskUrl::createTaskAccount($this->task);
             $handler = 'task.createTaskAccount';
@@ -52,7 +52,7 @@ class AllocateCoinsButton extends Widget
 
         return $this->render('AllocateCoinsButton', [
             'task' => $this->task,
-            'actionLabel' => Yii::t('TasksModule.base', $actionLabel),
+            'actionLabel' => $actionLabel,
             'icon' => $icon,
             'url' => $url,
             'handler' => $handler,
